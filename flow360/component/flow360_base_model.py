@@ -2,15 +2,37 @@
 Flow360 base Model
 """
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional, Union
 from functools import wraps
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Extra, Field, validator
 
 from ..cloud.rest_api import RestApi
 
 
-class Flow360BaseModel(BaseModel, extra=Extra.allow, allow_mutation=False):
+class Flow360Status(Enum):
+    COMPLETED = 'completed'
+    ERROR = 'error'
+    DIVERGED = 'diverged'
+    UPLOADED = 'uploaded'
+    UPLOADING = 'uploading'
+    RUNNING = 'running'
+    PREPROCESSING = 'preprocessing'
+    GENERATING = 'generating'
+    PROCESSED = 'processed'
+    STOPPED = 'stopped'
+    DELETED = 'deleted'
+    PENDING = 'pending'
+    UNKNOWN = 'unknown'
+
+    def is_final(self):
+        if self in [Flow360Status.COMPLETED, Flow360Status.DIVERGED, Flow360Status.ERROR, Flow360Status.UPLOADED, Flow360Status.PROCESSED, Flow360Status.DELETED]:
+            return True
+        return False
+
+
+class Flow360BaseModel(BaseModel):
     """
     Flow360 base Model
     """
@@ -18,12 +40,16 @@ class Flow360BaseModel(BaseModel, extra=Extra.allow, allow_mutation=False):
     name: str
     user_id: str = Field(alias="userId")
     solver_version: Union[str, None] = Field(alias="solverVersion")
-    status: str
+    status: Flow360Status
     tags: Optional[List[str]]
     created_at: Optional[str] = Field(alias="createdAt")
     updated_at: Optional[datetime] = Field(alias="updatedAt")
     updated_by: Optional[str] = Field(alias="updatedBy")
+    deleted: bool
 
+    class Config:
+        extra=Extra.allow
+        allow_mutation=False
 
 def on_cloud_resource_only(func):
     """
@@ -57,6 +83,21 @@ def before_submit_only(func):
     return wrapper
 
 
+class ResourceDraft():
+
+    @property
+    def id(self):
+        """
+        returns id of resource
+        """
+        return self._id
+
+    def is_cloud_resource(self):
+        if self.id is None:
+            return False
+        return True
+    
+
 class Flow360Resource(RestApi):
     """
     Flow360 base resource model
@@ -69,9 +110,11 @@ class Flow360Resource(RestApi):
         super().__init__(*args, **kwargs)
 
     def __str__(self):
-        if self._info is not None:
-            return self._info.__str__()
-        return f"{self._resource_type} is not yet submitted."
+        return self.info.__str__()
+
+    def __repr__(self):
+        return self.info.__repr__()
+
 
     def is_cloud_resource(self):
         """
@@ -101,7 +144,8 @@ class Flow360Resource(RestApi):
         """
         returns status for resource
         """
-        return self.get_info(True).status
+        force = not self.info.status.is_final() and not self.info.deleted
+        return self.get_info(force).status
 
     @property
     def id(self):
@@ -169,3 +213,40 @@ def is_object_cloud_resource(resource: Flow360Resource):
             raise RuntimeError(msg)
         return True
     return False
+
+
+
+
+class Flow360ResourceListBase(list, RestApi):
+    """
+    Flow360 ResourceList base component
+    """
+
+    def __init__(self, ancestor_id: str = None, from_cloud: bool = True, include_deleted: bool = False, limit:int=100, endpoint=None, resourceClass: Flow360Resource = None):
+        if from_cloud:
+            endpoint = resourceClass._endpoint
+            if limit is not None and not include_deleted:
+                endpoint +="/page"
+
+            RestApi.__init__(self, endpoint=endpoint)
+
+            params = {"includeDeleted": include_deleted, "limit": limit, "start": 0}
+            if ancestor_id is not None:
+                params[resourceClass._params_ancestor_id_name()] = ancestor_id
+
+            resp = self.get(params=params)
+
+            if isinstance(resp, dict):
+                resp = resp['data']
+
+            if limit is None:
+                limit = -1
+
+            list.__init__(self, [resourceClass(meta_info=resourceClass._metaClass().parse_obj(item)) for item in resp[:limit]])
+
+    @classmethod
+    def from_cloud(cls):
+        """
+        get ResourceList from cloud
+        """
+        return cls(from_cloud=True)

@@ -10,6 +10,8 @@ import math
 from pydantic import BaseModel, Extra, Field, validator
 
 
+from .types import Axis, Coordinate
+
 class MeshBoundary(BaseModel):
     """
     Mesh boundary
@@ -75,10 +77,21 @@ class SlidingInterface(BaseModel):
     Sliding interface component
     """
 
-    stationary_patches: Optional[List[str]] = Field(alias="stationaryPatches")
-    rotating_patches: Optional[List[str]] = Field(alias="rotatingPatches")
-    axis_of_rotation: Optional[List[int]] = Field(alias="axisOfRotation")
-    center_of_rotation: Optional[List[int]] = Field(alias="centerOfRotation")
+    stationary_patches: List[str] = Field(alias="stationaryPatches")
+    rotating_patches: List[str] = Field(alias="rotatingPatches")
+    axis_of_rotation: Axis = Field(alias="axisOfRotation")
+    center_of_rotation: Coordinate = Field(alias="centerOfRotation")
+
+
+class MeshSlidingInterface(BaseModel):
+    """
+    Sliding interface component
+    """
+
+    stationary_patches: List[str] = Field(alias="stationaryPatches")
+    rotating_patches: List[str] = Field(alias="rotatingPatches")
+    axis_of_rotation: Axis = Field(alias="axisOfRotation")
+    center_of_rotation: Coordinate = Field(alias="centerOfRotation")
 
 
 class TimeSteppingCFL(BaseModel):
@@ -248,7 +261,7 @@ class Flow360MeshParams(BaseModel):
     """
 
     boundaries: MeshBoundary = Field()
-    sliding_interfaces: Optional[List[SlidingInterface]] = Field(alias="slidingInterfaces")
+    sliding_interfaces: Optional[List[MeshSlidingInterface]] = Field(alias="slidingInterfaces")
 
     def json(self, *args, **kwargs):
         """

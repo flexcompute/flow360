@@ -3,15 +3,20 @@ Case component
 """
 from __future__ import annotations
 import json
+import time
 from enum import Enum
-from pydantic import Extra, Field
+from pydantic import Extra, Field, validator
 from pylab import show, subplots
+from typing import Iterator
 
 from ..cloud.s3_utils import S3TransferType, CloudFileNotFoundError
 from ..cloud.rest_api import RestApi
 from .flow360_base_model import (
     Flow360BaseModel,
     Flow360Resource,
+    Flow360Status,
+    Flow360ResourceListBase,
+    ResourceDraft,
     before_submit_only,
     on_cloud_resource_only,
     is_object_cloud_resource,
@@ -20,14 +25,14 @@ from .flow360_solver_params import Flow360Params
 from .utils import is_valid_uuid
 
 
-class CaseMeta(Flow360BaseModel, extra=Extra.allow):
+class CaseMeta(Flow360BaseModel):
     """
     Case component
     """
 
     id: str = Field(alias="caseId")
     case_mesh_id: str = Field(alias="caseMeshId")
-    status: str = Field(alias="caseStatus")
+    status: Flow360Status
     parent_id: str = Field(alias="parentId")
 
     def to_case(self) -> Case:
@@ -37,173 +42,15 @@ class CaseMeta(Flow360BaseModel, extra=Extra.allow):
         return Case(self.id)
 
 
+
 # pylint: disable=too-many-instance-attributes
-class Case(Flow360Resource):
+class CaseBase():
     """
-    Case component
+    Case Base component
     """
+    _endpoint = 'cases'
 
-    def __init__(self, case_id: str = None):
-        super().__init__(
-            resource_type="Case",
-            info_type_class=CaseMeta,
-            s3_transfer_method=S3TransferType.CASE,
-            endpoint="case",
-            id=case_id,
-        )
-        if case_id is not None:
-            self.get_info()
-            self._params = Flow360Params(**json.loads(self.get(method="runtimeParams")["content"]))
-
-        self.other_case = None
-        self.parent_case = None
-        self.parent_id = None
-        self.tags = None
-        self._results = CaseResults(self)
-
-    def __str__(self):
-        if self._info is not None:
-            return self.info.__str__()
-        return "Case is not yet submitted"
-
-    @property
-    def params(self):
-        """
-        returns case params
-        """
-        return self._params
-
-    @params.setter
-    @before_submit_only
-    def params(self, value):
-        """
-        sets case params (before submit only)
-        """
-        if not isinstance(value, Flow360Params):
-            raise ValueError("params are not of type Flow360Params.")
-        self._params = value
-
-    @property
-    def name(self):
-        """
-        returns case name
-        """
-        if self.is_cloud_resource():
-            return self.info.name
-        return self._name
-
-    @name.setter
-    @before_submit_only
-    def name(self, value):
-        """
-        sets case name (before submit only)
-        """
-        self._name = value
-
-    @property
-    def volume_mesh_id(self):
-        """
-        returns volume mesh id (before submit only)
-        """
-        if self.is_cloud_resource():
-            return self.info.case_mesh_id
-        return self._volume_mesh_id
-
-    @volume_mesh_id.setter
-    @before_submit_only
-    def volume_mesh_id(self, value):
-        """
-        sets volume mesh id (before submit only)
-        """
-        self._volume_mesh_id = value
-
-    @property
-    @on_cloud_resource_only
-    def results(self) -> CaseResults:
-        """
-        returns results object to managing case results
-        """
-        return self._results
-
-    @before_submit_only
-    def submit(self):
-        """
-        submits case to cloud for running
-        """
-        assert self.name
-        assert self.volume_mesh_id or self.other_case or self.parent_id or self.parent_case
-        assert self.params
-
-        self.validate_case_inputs(pre_submit_checks=True)
-
-        volume_mesh_id = self.volume_mesh_id
-        parent_id = self.parent_id
-        if parent_id is not None:
-            self.parent_case = Case(self.parent_id)
-
-        if self.parent_case is not None:
-            parent_id = self.parent_case.id
-            volume_mesh_id = self.parent_case.volume_mesh_id
-
-        volume_mesh_id = volume_mesh_id or self.other_case.volume_mesh_id
-
-        is_valid_uuid(volume_mesh_id)
-        is_valid_uuid(parent_id, ignore_none=True)
-
-        resp = self.post(
-            json={
-                "name": self.name,
-                "meshId": volume_mesh_id,
-                "runtimeParams": self.params.json(),
-                "tags": self.tags,
-                "parentId": parent_id,
-            },
-            path=f"volumemeshes/{volume_mesh_id}/case",
-        )
-        self._info = CaseMeta(**resp)
-        self.init_id(self._info.id)
-
-    @on_cloud_resource_only
-    def download_log(self, log, to_file=".", keep_folder: bool = True):
-        """
-        Download log
-        :param log:
-        :param to_file: file name on local disk, could be either folder or file name.
-        :param keep_folder: If true, the downloaded file will be put in the same folder as the file on cloud. Only work
-        when file_name is a folder name.
-        :return:
-        """
-
-        self.download_file(f"logs/{log.value}", to_file, keep_folder)
-
-    @on_cloud_resource_only
-    def is_case_steady(self):
-        """
-        returns True when case is steady state
-        """
-        return self.params.time_stepping.time_step_size == "inf"
-
-    @on_cloud_resource_only
-    def has_actuator_disks(self):
-        """
-        returns True when case has actuator disk
-        """
-        if self.params.actuator_disks is not None:
-            if len(self.params.actuator_disks) > 0:
-                return True
-        return False
-
-    @on_cloud_resource_only
-    def has_bet_disks(self):
-        """
-        returns True when case has BET disk
-        """
-        if self.params.bet_disks is not None:
-            if len(self.params.bet_disks) > 0:
-                return True
-        return False
-
-    def copy(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> Case:
+    def copy(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
         """
         Alias for retry case
         :param name:
@@ -214,7 +61,7 @@ class Case(Flow360Resource):
 
         return self.retry(name, params, tags)
 
-    def retry(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> Case:
+    def retry(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
         """
         Retry case
         :param name:
@@ -241,7 +88,7 @@ class Case(Flow360Resource):
 
         return self.fork(name, params, tags)
 
-    def fork(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> Case:
+    def fork(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
         """
         Fork a case to continue simulation
         :param name:
@@ -254,7 +101,119 @@ class Case(Flow360Resource):
         params = params or self.params.copy(deep=True)
         return Case.new(name, params, parent_case=self, tags=tags)
 
+
+
+# pylint: disable=too-many-instance-attributes
+class CaseDraft(CaseBase, ResourceDraft):
+    """
+    Case Draft component (before submission)
+    """
+
+    def __init__(self):
+        self.other_case = None
+        self.parent_case = None
+        self.parent_id = None
+        self.tags = None
+        self._id = None
+
+    def __str__(self):
+        if self._info is not None:
+            return self.info.__str__()
+        return "Case is not yet submitted"
+
+    @property
+    def params(self) -> Flow360Params:
+        """
+        returns case params
+        """
+        return self._params
+
+    @params.setter
+    def params(self, value: Flow360Params):
+        """
+        sets case params (before submit only)
+        """
+        if not isinstance(value, Flow360Params):
+            raise ValueError("params are not of type Flow360Params.")
+        self._params = value
+
+
+    @property
+    def name(self) -> str:
+        """
+        returns case name
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value) ->str:
+        """
+        sets case name
+        """
+        self._name = value
+
+    @property
+    def volume_mesh_id(self):
+        """
+        returns volume mesh id
+        """
+        return self._volume_mesh_id
+
+
+    @volume_mesh_id.setter
+    def volume_mesh_id(self, value):
+        """
+        sets volume mesh id
+        """
+        self._volume_mesh_id = value
+
     @before_submit_only
+    def submit(self) -> Case:
+        """
+        submits case to cloud for running
+        """
+        assert self.name
+        assert self.volume_mesh_id or self.other_case or self.parent_id or self.parent_case
+        assert self.params
+
+        self.validate_case_inputs(pre_submit_checks=True)
+
+        volume_mesh_id = self.volume_mesh_id
+        parent_id = self.parent_id
+        if parent_id is not None:
+            self.parent_case = Case(self.parent_id)
+
+        if isinstance(self.parent_case, CaseDraft):
+            self.parent_case = Case(self.parent_case.id)
+
+        if  isinstance(self.other_case, CaseDraft):
+            self.other_case = Case(self.other_case.id)
+
+        if self.parent_case is not None:
+            parent_id = self.parent_case.id
+            volume_mesh_id = self.parent_case.volume_mesh_id
+
+        volume_mesh_id = volume_mesh_id or self.other_case.volume_mesh_id
+
+        is_valid_uuid(volume_mesh_id)
+        is_valid_uuid(parent_id, ignore_none=True)
+
+        resp = RestApi(self._endpoint).post(
+            json={
+                "name": self.name,
+                "meshId": volume_mesh_id,
+                "runtimeParams": self.params.json(),
+                "tags": self.tags,
+                "parentId": parent_id,
+            },
+            path=f"volumemeshes/{volume_mesh_id}/case",
+        )
+        info = CaseMeta(**resp)
+        self._id = info.id
+
+        case = Case(self.id)
+        return case
+
     def validate_case_inputs(self, pre_submit_checks=False):
         """
         validates case inputs (before submit only)
@@ -277,6 +236,124 @@ class Case(Flow360Resource):
             is_object_cloud_resource(self.other_case)
             is_object_cloud_resource(self.parent_case)
 
+
+
+# pylint: disable=too-many-instance-attributes
+class Case(CaseBase, Flow360Resource):
+    """
+    Case component
+    """
+
+    def __init__(self, case_id: str=None, meta_info: CaseMeta = None):
+        if (case_id is None and meta_info is None) or (case_id is not None and meta_info is not None):
+            raise ValueError('You must provide case_id OR meta_info to constructor.')
+
+        self._info = None
+        if meta_info is not None:
+            case_id = meta_info.id
+            self._info = meta_info
+
+        assert case_id is not None
+
+        super().__init__(
+            resource_type="Case",
+            info_type_class=CaseMeta,
+            s3_transfer_method=S3TransferType.CASE,
+            endpoint=self._endpoint,
+            id=case_id,
+        )
+        self._params = None
+        self._results = CaseResults(self)
+
+    @property
+    def params(self) -> Flow360Params:
+        """
+        returns case params
+        """
+        if self._params is None:
+            self._params = Flow360Params(**json.loads(self.get(method="runtimeParams")["content"]))
+        return self._params
+
+    @property
+    def name(self) -> str:
+        """
+        returns case name
+        """
+        return self.info.name
+
+    @property
+    def info(self) -> CaseMeta:
+        """
+        returns metadata info for case
+        """
+        return super().info
+
+    @property
+    def volume_mesh_id(self):
+        """
+        returns volume mesh id
+        """
+        return self.info.case_mesh_id
+
+
+    @property
+    def results(self) -> CaseResults:
+        """
+        returns results object to managing case results
+        """
+        return self._results
+
+
+    def download_log(self, log, to_file=".", keep_folder: bool = True):
+        """
+        Download log
+        :param log:
+        :param to_file: file name on local disk, could be either folder or file name.
+        :param keep_folder: If true, the downloaded file will be put in the same folder as the file on cloud. Only work
+        when file_name is a folder name.
+        :return:
+        """
+
+        self.download_file(f"logs/{log.value}", to_file, keep_folder)
+
+    def is_case_steady(self):
+        """
+        returns True when case is steady state
+        """
+        return self.params.time_stepping.time_step_size == "inf"
+
+    def has_actuator_disks(self):
+        """
+        returns True when case has actuator disk
+        """
+        if self.params.actuator_disks is not None:
+            if len(self.params.actuator_disks) > 0:
+                return True
+        return False
+
+    def has_bet_disks(self):
+        """
+        returns True when case has BET disk
+        """
+        if self.params.bet_disks is not None:
+            if len(self.params.bet_disks) > 0:
+                return True
+        return False
+
+    @classmethod
+    def _metaClass(self):
+        """
+        returns case meta info class: CaseMeta
+        """
+        return CaseMeta
+
+    @classmethod
+    def _params_ancestor_id_name(self):
+        """
+        returns volumeMeshId name
+        """
+        return "meshId"
+
     @classmethod
     def from_cloud(cls, case_id: str):
         """
@@ -295,7 +372,7 @@ class Case(Flow360Resource):
         parent_id=None,
         other_case: Case = None,
         parent_case: Case = None,
-    ) -> Case:
+    ) -> CaseDraft:
         """
         Create new case
         :param name:
@@ -315,7 +392,7 @@ class Case(Flow360Resource):
         if not isinstance(params, Flow360Params):
             raise ValueError("params are not of type Flow360Params.")
 
-        new_case = cls()
+        new_case = CaseDraft()
         new_case.name = name
         new_case.volume_mesh_id = volume_mesh_id
         new_case.other_case = other_case
@@ -703,20 +780,34 @@ class CaseResults:
                     raise err
 
 
-class CaseList(list, RestApi):
+class CaseList(Flow360ResourceListBase):
     """
     Case List component
     """
 
-    def __init__(self, mesh_id: str = None, from_cloud: bool = True, include_deleted: bool = False):
-        if mesh_id is not None:
-            RestApi.__init__(self, endpoint=f"volumemeshes/{mesh_id}/cases")
-        else:
-            RestApi.__init__(self, endpoint="cases")
+    # def __init__(self, mesh_id: str = None, from_cloud: bool = True, include_deleted: bool = False, limit=100):
+    #     if from_cloud:
+    #         if limit is None or include_deleted:
+    #             endpoint="cases"
+    #         else:
+    #             endpoint="cases/page"
+    #         RestApi.__init__(self, endpoint=endpoint)
+    #         params = {"includeDeleted": include_deleted, "limit": limit, "start": 0}
+    #         if mesh_id is not None:
+    #             params["meshId"] = mesh_id
+    #         resp = self.get(params=params)
 
-        if from_cloud:
-            resp = self.get(params={"includeDeleted": include_deleted})
-            list.__init__(self, [CaseMeta(**item) for item in resp])
+    #         if isinstance(resp, dict):
+    #             resp = resp['data']
+
+    #         if limit is None:
+    #             limit = -1
+
+    #         list.__init__(self, [Case(meta_info=CaseMeta.parse_obj(item)) for item in resp[:limit]])
+
+
+    def __init__(self, mesh_id: str = None, from_cloud: bool = True, include_deleted: bool = False, limit=100):
+        super().__init__(ancestor_id=mesh_id, from_cloud=from_cloud, include_deleted=include_deleted, limit=limit, resourceClass=Case)
 
     def filter(self):
         """
@@ -725,15 +816,11 @@ class CaseList(list, RestApi):
         raise NotImplementedError("Filters are not implemented yet")
         # resp = list(filter(lambda i: i['caseStatus'] != 'deleted', resp))
 
-    def __getitem__(self, index) -> CaseMeta:
+    def __getitem__(self, index) -> Case:
         """
         returns CaseMeta info item of the list
         """
         return super().__getitem__(index)
 
-    @classmethod
-    def from_cloud(cls, mesh_id: str = None):
-        """
-        get Case List from cloud
-        """
-        return cls(mesh_id=mesh_id, from_cloud=True)
+    def __iter__(self) -> Iterator[Case]:
+        return super().__iter__()

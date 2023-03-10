@@ -3,6 +3,12 @@ from sys import exc_info
 
 import pytest
 
+from flow360.component.volume_mesh import (
+    VolumeMesh,
+    VolumeMeshList
+)
+
+
 from flow360.component.flow360_solver_params import (
     Flow360MeshParams,
     Flow360Params,
@@ -20,6 +26,10 @@ from flow360.component.volume_mesh import (
     UGRIDEndianness,
     VolumeMeshMeta,
 )
+
+
+from .mock_server import *
+
 
 from tests.data.volume_mesh_list import volume_mesh_list_raw
 
@@ -62,6 +72,18 @@ def test_get_no_slip_walls():
 
 
 def test_get_walls_from_sliding_interfaces():
+    param = Flow360MeshParams(
+        sliding_interfaces=[SlidingInterface.parse_obj(
+            {"stationaryPatches": ["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"]}
+        )],
+        boundaries=MeshBoundary(no_slip_walls=["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"])
+    )
+    walls = get_boundries_from_sliding_interfaces(param)
+    assert walls
+    assert len(walls) == 3
+
+
+def test_mesh_params_from_file():
     param = Flow360Params(
         sliding_interfaces=SlidingInterface.parse_obj(
             {"stationaryPatches": ["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"]}
@@ -70,6 +92,7 @@ def test_get_walls_from_sliding_interfaces():
     walls = get_boundries_from_sliding_interfaces(param)
     assert walls
     assert len(walls) == 3
+
 
 
 def test_validate_cgns():
@@ -128,29 +151,89 @@ def test_mesh_filename_detection():
 
 def test_volume_mesh_list_with_incorrect_data():
     v = VolumeMeshMeta(**volume_mesh_list_raw[0])
-    assert v.status == "uploaded"
+    assert v.status.value == "uploaded"
     assert type(v.mesh_params) is Flow360MeshParams
     assert type(v.mesh_params.boundaries) is MeshBoundary
     assert v.mesh_params.boundaries.no_slip_walls == ["1", "wall"]
 
     v = VolumeMeshMeta(**volume_mesh_list_raw[1])
-    assert v.status == "uploaded"
+    assert v.status.value == "uploaded"
     assert type(v.mesh_params) is Flow360MeshParams
     assert type(v.mesh_params.boundaries) is MeshBoundary
     assert v.mesh_params.boundaries.no_slip_walls == ["4"]
 
     v = VolumeMeshMeta(**volume_mesh_list_raw[2])
-    assert v.status == "uploaded"
+    assert v.status.value == "uploaded"
     assert type(v.mesh_params) is Flow360MeshParams
     assert type(v.mesh_params.boundaries) is MeshBoundary
     assert v.mesh_params.boundaries.no_slip_walls == ["1"]
 
     item_incorrect1 = volume_mesh_list_raw[3]
     v = VolumeMeshMeta(**item_incorrect1)
-    assert v.status == "error"
+    assert v.status.value == "error"
     assert v.mesh_params is None
 
     item_incorrect2 = volume_mesh_list_raw[4]
     v = VolumeMeshMeta(**item_incorrect2)
-    assert v.status == "error"
+    assert v.status.value == "error"
     assert v.mesh_params is None
+
+
+
+
+def test_volume_mesh_list(mock_response):
+    list = VolumeMeshList()
+
+    mesh = list[0]
+    print(mesh.info)
+
+    deleted = [item for item in list if item.info.deleted]
+
+    assert len(list) == 100
+    assert len(deleted) == 0
+    assert mesh.status.value == 'uploaded'
+    assert mesh.status.is_final()
+
+    for mesh in list:
+        assert isinstance(mesh, VolumeMesh)
+
+
+
+def test_volume_mesh_list_with_deleted(mock_response):
+    list = VolumeMeshList(include_deleted=True)
+
+    deleted = [item for item in list if item.info.deleted]
+    assert len(deleted) == 16
+
+    for mesh in list:
+        assert isinstance(mesh, VolumeMesh)
+
+def test_volume_mesh_list_with_deleted_without_limit(mock_response):
+    list = VolumeMeshList(include_deleted=True, limit=None)
+
+    deleted = [item for item in list if item.info.deleted]
+    assert len(list) == 521
+    assert len(deleted) == 194
+
+    for mesh in list:
+        assert isinstance(mesh, VolumeMesh)
+
+def test_volume_mesh_list_with_limit(mock_response):
+    list = VolumeMeshList(limit=10)
+
+    deleted = [item for item in list if item.info.deleted]
+    assert len(list) == 10
+    assert len(deleted) == 0
+
+    for mesh in list:
+        assert isinstance(mesh, VolumeMesh)
+
+def test_volume_mesh_list_without_limit(mock_response):
+    list = VolumeMeshList(limit=None)
+
+    deleted = [item for item in list if item.info.deleted]
+    assert len(list) == 326
+    assert len(deleted) == 0
+    
+    for mesh in list:
+        assert isinstance(mesh, VolumeMesh)

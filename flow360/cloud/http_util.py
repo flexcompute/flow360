@@ -8,6 +8,7 @@ import requests
 
 from ..environment import Env
 from ..version import __version__
+from ..exceptions import AuthorisationError, NotFoundError
 
 from .security import api_key
 
@@ -39,11 +40,12 @@ def http_interceptor(func):
 
         # Extend some capabilities of func
         resp = func(*args, **kwargs)
+
         if resp.status_code == 401:
-            raise Exception("Unauthorized.")
+            raise AuthorisationError("Unauthorized.")
 
         if resp.status_code == 404:
-            return None
+            raise NotFoundError('Not found.')
 
         if resp.status_code == 200:
             result = resp.json()
