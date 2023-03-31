@@ -9,8 +9,9 @@ from flow360.component.volume_mesh import (
 )
 
 
-from flow360.component.flow360_solver_params import (
+from flow360.component.flow360_params import (
     Flow360MeshParams,
+    MeshSlidingInterface,
     Flow360Params,
     MeshBoundary,
     NoSlipWall,
@@ -26,10 +27,10 @@ from flow360.component.volume_mesh import (
     UGRIDEndianness,
     VolumeMeshMeta,
 )
+from flow360.exceptions import ValueError
 
 
-from .mock_server import *
-
+from .utils import to_file_from_file_test, compare_to_ref
 
 from tests.data.volume_mesh_list import volume_mesh_list_raw
 
@@ -66,30 +67,11 @@ def test_get_no_slip_walls():
             "fluid/rightWing": NoSlipWall(),
         }
     )
+    
+    to_file_from_file_test(param)
+    to_file_from_file_test(param.boundaries)
+
     walls = get_no_slip_walls(param)
-    assert walls
-    assert len(walls) == 3
-
-
-def test_get_walls_from_sliding_interfaces():
-    param = Flow360MeshParams(
-        sliding_interfaces=[SlidingInterface.parse_obj(
-            {"stationaryPatches": ["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"]}
-        )],
-        boundaries=MeshBoundary(no_slip_walls=["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"])
-    )
-    walls = get_boundries_from_sliding_interfaces(param)
-    assert walls
-    assert len(walls) == 3
-
-
-def test_mesh_params_from_file():
-    param = Flow360Params(
-        sliding_interfaces=SlidingInterface.parse_obj(
-            {"stationaryPatches": ["fluid/fuselage", "fluid/leftWing", "fluid/rightWing"]}
-        )
-    )
-    walls = get_boundries_from_sliding_interfaces(param)
     assert walls
     assert len(walls) == 3
 
@@ -181,59 +163,11 @@ def test_volume_mesh_list_with_incorrect_data():
 
 
 
-def test_volume_mesh_list(mock_response):
-    list = VolumeMeshList()
+def test_volume_mesh_json():
+    param = Flow360MeshParams('ref/flow360mesh/eg1.json')
+    assert param.boundaries.no_slip_walls[0] == '1'
 
-    mesh = list[0]
-    print(mesh.info)
+    for file in ['ref/flow360mesh/eg2.json', 'ref/flow360mesh/eg3.json']:
+        param = Flow360MeshParams(file)
+        compare_to_ref(param, file, content_only=True)
 
-    deleted = [item for item in list if item.info.deleted]
-
-    assert len(list) == 100
-    assert len(deleted) == 0
-    assert mesh.status.value == 'uploaded'
-    assert mesh.status.is_final()
-
-    for mesh in list:
-        assert isinstance(mesh, VolumeMesh)
-
-
-
-def test_volume_mesh_list_with_deleted(mock_response):
-    list = VolumeMeshList(include_deleted=True)
-
-    deleted = [item for item in list if item.info.deleted]
-    assert len(deleted) == 16
-
-    for mesh in list:
-        assert isinstance(mesh, VolumeMesh)
-
-def test_volume_mesh_list_with_deleted_without_limit(mock_response):
-    list = VolumeMeshList(include_deleted=True, limit=None)
-
-    deleted = [item for item in list if item.info.deleted]
-    assert len(list) == 521
-    assert len(deleted) == 194
-
-    for mesh in list:
-        assert isinstance(mesh, VolumeMesh)
-
-def test_volume_mesh_list_with_limit(mock_response):
-    list = VolumeMeshList(limit=10)
-
-    deleted = [item for item in list if item.info.deleted]
-    assert len(list) == 10
-    assert len(deleted) == 0
-
-    for mesh in list:
-        assert isinstance(mesh, VolumeMesh)
-
-def test_volume_mesh_list_without_limit(mock_response):
-    list = VolumeMeshList(limit=None)
-
-    deleted = [item for item in list if item.info.deleted]
-    assert len(list) == 326
-    assert len(deleted) == 0
-    
-    for mesh in list:
-        assert isinstance(mesh, VolumeMesh)

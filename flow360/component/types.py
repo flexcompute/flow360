@@ -1,15 +1,9 @@
 """ Defines 'types' that various fields can be """
 
-from typing import Tuple, Union, List, Optional
-
-# Literal only available in python 3.8 + so try import otherwise use extensions
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
+from typing import Tuple, Union, List, Optional, Literal
 from typing_extensions import Annotated
 
-import pydantic
+import pydantic as pd
 import numpy as np
 from matplotlib.axes import Axes
 from ..exceptions import ValidationError
@@ -17,12 +11,12 @@ from ..exceptions import ValidationError
 """ Numpy Arrays """
 
 # type tag default name
-TYPE_TAG_STR = "type"
+TYPE_TAG_STR = "_type"
 
 
 def annotate_type(UnionType):  # pylint:disable=invalid-name
     """Annotated union type using TYPE_TAG_STR as discriminator."""
-    return Annotated[UnionType, pydantic.Field(discriminator=TYPE_TAG_STR)]
+    return Annotated[UnionType, pd.Field(discriminator=TYPE_TAG_STR)]
 
 
 # generic numpy array
@@ -94,12 +88,35 @@ class ArrayLike(np.ndarray, metaclass=ArrayLikeMeta):
 
 """ geometric """
 
-Size1D = pydantic.NonNegativeFloat
-Size = Tuple[Size1D, Size1D, Size1D]
+PositiveFloat = pd.PositiveFloat
+PositiveInt = pd.PositiveInt
+NonNegativeInt = pd.NonNegativeInt
+Size = Tuple[PositiveFloat, PositiveFloat, PositiveFloat]
+MomentLengthType = Tuple[PositiveFloat, PositiveFloat, PositiveFloat]
+BoundaryVelocityType = Tuple[Union[float, str], Union[float, str], Union[float, str]]
+List2D = List[List[float]]
+
 # we use tuple for fixed length lists, beacause List is a mutable, variable length structure
 Coordinate = Tuple[float, float, float]
 
-class PydanticValidate(pydantic.BaseModel):
+class DimensionedValue(pd.BaseModel):
+    v: float
+    unit: Literal[None]
+
+class Omega(DimensionedValue):
+    unit: Literal['non-dim', 'rad/s', 'deg/s']
+
+class Velocity(DimensionedValue):
+    unit: Literal['non-dim', 'm/s']
+
+class TimeStep(DimensionedValue):
+    v: PositiveFloat
+    unit: Literal['s', 'sec', 'seconds', 'deg']
+
+    def is_second(self):
+        return self.unit in ['s', 'sec', 'seconds']
+
+class PydanticValidate(pd.BaseModel):
     c: Optional[Coordinate]
 
 
@@ -113,15 +130,9 @@ class Vector(Coordinate):
         if not isinstance(v, cls):
             v = cls(v)
         if v == (0, 0, 0):
-            raise pydantic.ValidationError(ValidationError('Vector cannot be (0, 0, 0)'), cls)
+            raise pd.ValidationError(ValidationError(f'{cls.__name__} cannot be (0, 0, 0)'), cls)
         return v
-
 
 class Axis(Vector):
     pass
 
-
-
-""" plotting """
-
-Ax = Axes

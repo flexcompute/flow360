@@ -7,25 +7,86 @@ import time
 from enum import Enum
 from pydantic import Extra, Field, validator
 from pylab import show, subplots
-from typing import Iterator
+from typing import Iterator, List
 
 from ..cloud.s3_utils import S3TransferType, CloudFileNotFoundError
 from ..cloud.rest_api import RestApi
-from .flow360_base_model import (
-    Flow360BaseModel,
+from .resource_base import (
+    Flow360ResourceBaseModel,
     Flow360Resource,
     Flow360Status,
     Flow360ResourceListBase,
     ResourceDraft,
     before_submit_only,
-    on_cloud_resource_only,
     is_object_cloud_resource,
 )
-from .flow360_solver_params import Flow360Params
+from .flow360_params import Flow360Params
 from .utils import is_valid_uuid
+from .validator import Validator
 
 
-class CaseMeta(Flow360BaseModel):
+
+# pylint: disable=too-many-instance-attributes
+class CaseBase():
+    """
+    Case Base component
+    """
+    _endpoint = 'cases'
+
+    def copy(self, name: str = None, params: Flow360Params = None, tags: List[str] = None) -> CaseDraft:
+        """
+        Alias for retry case
+        :param name:
+        :param params:
+        :param tags:
+        :return:
+        """
+
+        return self.retry(name, params, tags)
+
+    def retry(self, name: str = None, params: Flow360Params = None, tags: List[str] = None) -> CaseDraft:
+        """
+        Retry case
+        :param name:
+        :param params:
+        :param tags:
+        :return:
+        """
+
+        name = name or self.name or self.info.name
+        params = params or self.params.copy(deep=True)
+        new_case = Case.new(name, params, other_case=self, tags=tags)
+        return new_case
+
+    def continuation(
+        self, name: str = None, params: Flow360Params = None, tags: List[str] = None
+    ) -> Case:
+        """
+        Alias for fork a case to continue simulation
+        :param name:
+        :param params:
+        :param tags:
+        :return:
+        """
+
+        return self.fork(name, params, tags)
+
+    def fork(self, name: str = None, params: Flow360Params = None, tags: List[str] = None) -> CaseDraft:
+        """
+        Fork a case to continue simulation
+        :param name:
+        :param params:
+        :param tags:
+        :return:
+        """
+
+        name = name or self.name or self.info.name
+        params = params or self.params.copy(deep=True)
+        return Case.new(name, params, parent_case=self, tags=tags)
+
+
+class CaseMeta(Flow360ResourceBaseModel):
+    pass
     """
     Case component
     """
@@ -43,65 +104,6 @@ class CaseMeta(Flow360BaseModel):
 
 
 
-# pylint: disable=too-many-instance-attributes
-class CaseBase():
-    """
-    Case Base component
-    """
-    _endpoint = 'cases'
-
-    def copy(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
-        """
-        Alias for retry case
-        :param name:
-        :param params:
-        :param tags:
-        :return:
-        """
-
-        return self.retry(name, params, tags)
-
-    def retry(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
-        """
-        Retry case
-        :param name:
-        :param params:
-        :param tags:
-        :return:
-        """
-
-        name = name or self.name or self.info.name
-        params = params or self.params.copy(deep=True)
-        new_case = Case.new(name, params, other_case=self, tags=tags)
-        return new_case
-
-    def continuation(
-        self, name: str = None, params: Flow360Params = None, tags: [str] = None
-    ) -> Case:
-        """
-        Alias for fork a case to continue simulation
-        :param name:
-        :param params:
-        :param tags:
-        :return:
-        """
-
-        return self.fork(name, params, tags)
-
-    def fork(self, name: str = None, params: Flow360Params = None, tags: [str] = None) -> CaseDraft:
-        """
-        Fork a case to continue simulation
-        :param name:
-        :param params:
-        :param tags:
-        :return:
-        """
-
-        name = name or self.name or self.info.name
-        params = params or self.params.copy(deep=True)
-        return Case.new(name, params, parent_case=self, tags=tags)
-
-
 
 # pylint: disable=too-many-instance-attributes
 class CaseDraft(CaseBase, ResourceDraft):
@@ -117,9 +119,7 @@ class CaseDraft(CaseBase, ResourceDraft):
         self._id = None
 
     def __str__(self):
-        if self._info is not None:
-            return self.info.__str__()
-        return "Case is not yet submitted"
+        return self.params.__str__()
 
     @property
     def params(self) -> Flow360Params:
@@ -197,12 +197,13 @@ class CaseDraft(CaseBase, ResourceDraft):
 
         is_valid_uuid(volume_mesh_id)
         is_valid_uuid(parent_id, ignore_none=True)
+        self.validator_api(self.params, volume_mesh_id=volume_mesh_id)
 
         resp = RestApi(self._endpoint).post(
             json={
                 "name": self.name,
                 "meshId": volume_mesh_id,
-                "runtimeParams": self.params.json(),
+                "runtimeParams": self.params.to_flow360_json(),
                 "tags": self.tags,
                 "parentId": parent_id,
             },
@@ -236,6 +237,9 @@ class CaseDraft(CaseBase, ResourceDraft):
             is_object_cloud_resource(self.other_case)
             is_object_cloud_resource(self.parent_case)
 
+
+    def validator_api(self, params: Flow360Params, volume_mesh_id):
+        return Validator.CASE.validate(params, mesh_id=volume_mesh_id)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -316,7 +320,7 @@ class Case(CaseBase, Flow360Resource):
 
         self.download_file(f"logs/{log.value}", to_file, keep_folder)
 
-    def is_case_steady(self):
+    def is_steady(self):
         """
         returns True when case is steady state
         """
@@ -339,6 +343,13 @@ class Case(CaseBase, Flow360Resource):
             if len(self.params.bet_disks) > 0:
                 return True
         return False
+
+    def is_finished(self):
+        """
+        returns False when case is in running or preprocessing state
+        """
+        return self.status.is_final()
+
 
     @classmethod
     def _metaClass(self):
@@ -368,7 +379,7 @@ class Case(CaseBase, Flow360Resource):
         name: str,
         params: Flow360Params,
         volume_mesh_id: str = None,
-        tags: [str] = None,
+        tags: List[str] = None,
         parent_id=None,
         other_case: Case = None,
         parent_case: Case = None,
@@ -405,57 +416,6 @@ class Case(CaseBase, Flow360Resource):
 
         return new_case
 
-    # pylint: disable=too-many-arguments
-    # @classmethod
-    # def submit_multiple_phases(
-    #     cls,
-    #     name: str,
-    #     volume_mesh_id: str,
-    #     params: Flow360Params,
-    #     tags: [str] = None,
-    #     phase_steps=1,
-    # ):
-    #     """
-    #     Create multiple cases from volume mesh
-    #     :param name:
-    #     :param volume_mesh_id:
-    #     :param params:
-    #     :param tags:
-    #     :param parent_id:
-    #     :param phase_steps:
-    #     :return:
-    #     """
-
-    #     assert name
-    #     assert volume_mesh_id
-    #     assert params
-    #     assert phase_steps >= 1
-
-    #     result = []
-
-    #     total_steps = (
-    #         params.time_stepping.max_physical_steps
-    #         if params.time_stepping and params.time_stepping.max_physical_steps
-    #         else 1
-    #     )
-
-    #     num_cases = math.ceil(total_steps / phase_steps)
-    #     for i in range(1, num_cases + 1):
-    #         parent_id = result[-1].case_id if result else None
-    #         case = http.post(
-    #             f"volumemeshes/{volume_mesh_id}/case",
-    #             json={
-    #                 "name": f"{name}_{i}",
-    #                 "meshId": volume_mesh_id,
-    #                 "runtimeParams": params.json(),
-    #                 "tags": tags,
-    #                 "parentId": parent_id,
-    #             },
-    #         )
-
-    #         result.append(cls(**case))
-
-    #     return result
 
 
 class CaseResultType(Enum):
@@ -545,7 +505,7 @@ class ResultsPloter:
     # pylint: disable=protected-access
     def total_forces(self):
         """plot total forces"""
-        steady = self.results._case.is_case_steady()
+        steady = self.results._case.is_steady()
         forces = self.results.total_forces.raw
         if steady:
             _, ax1 = subplots()
@@ -784,27 +744,6 @@ class CaseList(Flow360ResourceListBase):
     """
     Case List component
     """
-
-    # def __init__(self, mesh_id: str = None, from_cloud: bool = True, include_deleted: bool = False, limit=100):
-    #     if from_cloud:
-    #         if limit is None or include_deleted:
-    #             endpoint="cases"
-    #         else:
-    #             endpoint="cases/page"
-    #         RestApi.__init__(self, endpoint=endpoint)
-    #         params = {"includeDeleted": include_deleted, "limit": limit, "start": 0}
-    #         if mesh_id is not None:
-    #             params["meshId"] = mesh_id
-    #         resp = self.get(params=params)
-
-    #         if isinstance(resp, dict):
-    #             resp = resp['data']
-
-    #         if limit is None:
-    #             limit = -1
-
-    #         list.__init__(self, [Case(meta_info=CaseMeta.parse_obj(item)) for item in resp[:limit]])
-
 
     def __init__(self, mesh_id: str = None, from_cloud: bool = True, include_deleted: bool = False, limit=100):
         super().__init__(ancestor_id=mesh_id, from_cloud=from_cloud, include_deleted=include_deleted, limit=limit, resourceClass=Case)

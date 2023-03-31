@@ -32,7 +32,7 @@ class Flow360Status(Enum):
         return False
 
 
-class Flow360BaseModel(BaseModel):
+class Flow360ResourceBaseModel(BaseModel):
     """
     Flow360 base Model
     """
@@ -84,7 +84,6 @@ def before_submit_only(func):
 
 
 class ResourceDraft():
-
     @property
     def id(self):
         """
@@ -140,7 +139,7 @@ class Flow360Resource(RestApi):
 
     @property
     @on_cloud_resource_only
-    def status(self):
+    def status(self) -> Flow360Status:
         """
         returns status for resource
         """

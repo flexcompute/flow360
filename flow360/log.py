@@ -19,6 +19,13 @@ _level_value = {
 }
 
 _level_name = {v: k for k, v in _level_value.items()}
+_level_print_style = {
+    "DEBUG": "DEBUG",
+    "INFO": "[cyan]INFO[/cyan]",
+    "WARNING": "[yellow]WARNING[/yellow]",
+    "ERROR": "[bold red]ERROR[/bold red]",
+    "CRITICAL": "[bold underline red]CRITICAL[/bold underline red]",
+}
 
 DEFAULT_LEVEL = "INFO"
 
@@ -54,7 +61,7 @@ class LogHandler:
     def handle(self, level, level_name, message):
         """Output log messages depending on log level"""
         if level >= self.level:
-            self.console.log(level_name, message, sep=": ")
+            self.console.log(_level_print_style.get(level_name, 'unknown'), message, sep=": ")
 
 
 class Logger:
@@ -98,7 +105,7 @@ class Logger:
         self._log(_level_value["CRITICAL"], "CRITICAL", message % args)
 
 
-# Initialize Tidy3d's logger
+# Initialize FLow360's logger
 log = Logger()
 
 

@@ -11,13 +11,6 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 
 
-TASK_NAME = "TASK_NAME"
-TASK_ID = "TASK_ID"
-PROJECT_ID = "PROJECT_ID"
-PROJECT_NAME = "PROJECT_NAME"
-FOLDER_NAME = "FOLDER_NAME"
-
-
 class MockResponse:
     """generic response to a requests function."""
 
@@ -39,7 +32,7 @@ class MockResponseVolumeMeshesPage(MockResponse):
     def json():
         with open(os.path.join(here, 'data/mock_webapi/volumemesh_page_webapi_resp.json')) as fh:
             res = json.load(fh)
-        res['data']['data'] = [item for item in res['data']['data'] if item['deleted'] == False]    
+            res['data']['data'] = [item for item in res['data']['data'] if item['deleted'] == False]    
         return res
     
 
@@ -60,7 +53,7 @@ class MockResponseVolumeMeshes(MockResponse):
     def json():
         with open(os.path.join(here, 'data/mock_webapi/volumemesh_webapi_resp.json')) as fh:
             res = json.load(fh)
-        res['data'] = [item for item in res['data'] if item['deleted'] == False]    
+            res['data'] = [item for item in res['data'] if item['deleted'] == False]    
         return res
 
 
@@ -74,33 +67,31 @@ class MockResponseVolumeMeshesWithDeleted(MockResponse):
         return res
 
 
-class MockResponseInfoOk(MockResponse):
-    """response if web.getinfo(task_id) and task_id found"""
+class MockResponseCase(MockResponse):
+    """response if Case(id="00000000-0000-0000-0000-000000000000")"""
 
     @staticmethod
     def json():
-        return {"taskId": TASK_ID}
+        with open(os.path.join(here, 'data/mock_webapi/case_meta_resp.json')) as fh:
+            res = json.load(fh)
+        return res
+
+
+class MockResponseCaseRuntimeParams(MockResponse):
+    """response if Case(id="00000000-0000-0000-0000-000000000000").params"""
+
+    @staticmethod
+    def json():
+        with open(os.path.join(here, 'data/mock_webapi/case_params_resp.json')) as fh:
+            res = json.load(fh)
+        return res
+
 
 
 class MockResponseInfoNotFound(MockResponse):
-    """response if web.getinfo(task_id) and task_id not found"""
+    """response if web.getinfo(case_id) and case_id not found"""
 
-    @staticmethod
-    def json():
-        return {"data": None}
-
-
-class MockResponseUpload(MockResponse):
-    """response if web.upload()"""
-
-    @staticmethod
-    def json():
-        return {"taskId": TASK_ID}
-
-
-
-class MockResponseStart(MockResponse):
-    """response if web.start()"""
+    status_code = 404
 
     @staticmethod
     def json():
@@ -108,45 +99,9 @@ class MockResponseStart(MockResponse):
 
 
 
-
-class MockResponseFolder(MockResponse):
-    @staticmethod
-    def json():
-        return {"projectId": PROJECT_ID, "projectName": PROJECT_NAME}
-
-
-# map method path to the proper mocj response
-RESPONSE_MAP = {
-    # get responses
-    f"flow360/volumemeshes": MockResponseInfoOk(),
-    f"tidy3d/tasks/None/detail": MockResponseInfoNotFound(),
-    f"tidy3d/project?projectName={FOLDER_NAME}": MockResponseFolder(),
-    # f'tidy3d/tasks/{TASK_ID}/file?filename=simulation.json': MockResponseUploadString()
-    # post responses
-    f"tidy3d/projects/{PROJECT_ID}/tasks": MockResponseUpload(),
-    # f'tidy3d/projects/FAIL/tasks': MockResponseUploadFailure(),
-    f"tidy3d/tasks/{TASK_ID}/submit": MockResponseStart(),
-}
-
-
-# RESPONSE_MAP = {
-#     # get responses
-#     f"flow360/volumemeshes": MockResponseVolumeMeshes(),
-#     f"flow360/volumemeshes": MockResponseVolumeMeshes(),
-
-#     f"tidy3d/tasks/None/detail": MockResponseInfoNotFound(),
-#     f"tidy3d/project?projectName={FOLDER_NAME}": MockResponseFolder(),
-#     # f'tidy3d/tasks/{TASK_ID}/file?filename=simulation.json': MockResponseUploadString()
-#     # post responses
-#     f"tidy3d/projects/{PROJECT_ID}/tasks": MockResponseUpload(),
-#     # f'tidy3d/projects/FAIL/tasks': MockResponseUploadFailure(),
-#     f"tidy3d/tasks/{TASK_ID}/submit": MockResponseStart(),
-# }
 
 def mock_webapi(url, params):
     method = url.split('flow360')[-1]
-
-    print(method)
 
     if method.startswith("volumemeshes/page"):
         if params['includeDeleted']:
@@ -158,8 +113,14 @@ def mock_webapi(url, params):
             return MockResponseVolumeMeshesWithDeleted()   
         return MockResponseVolumeMeshes()   
      
+    if method.startswith("cases/00000000-0000-0000-0000-000000000000/runtimeParams"):
+        return MockResponseCaseRuntimeParams()   
+
+    if method.startswith("cases/00000000-0000-0000-0000-000000000000"):
+        return MockResponseCase()   
+
     else:
-        MockResponseInfoNotFound(),
+        return MockResponseInfoNotFound()
 
 
 
@@ -176,6 +137,8 @@ def mock_response(monkeypatch):
 
         print(f'calling this mock, {url} {kwargs}')
 
+        res = mock_webapi(method, params)
+        print(f'status code: {res.status_code}')
         return mock_webapi(method, params)
 
     class MockRequests:
