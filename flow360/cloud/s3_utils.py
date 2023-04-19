@@ -199,7 +199,7 @@ class S3TransferType(Enum):
                 Filename=file_name,
                 Key=token.get_s3_key(),
                 Callback=progress_callback,
-                Config=_s3_config,
+                # Config=_s3_config,
             )
         else:
             with _get_progress(_S3Action.UPLOADING) as progress:
@@ -216,7 +216,7 @@ class S3TransferType(Enum):
                     Filename=file_name,
                     Key=token.get_s3_key(),
                     Callback=_call_back,
-                    Config=_s3_config,
+                    # Config=_s3_config,
                 )
 
     # pylint: disable=too-many-arguments
