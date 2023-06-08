@@ -420,35 +420,16 @@ class MeshSlidingInterface(Flow360BaseModel):
         )
 
 
-class TimeSteppingCFL(Flow360BaseModel):
+class TimeSteppingCFLRamp(Flow360BaseModel):
     """
     CFL for time stepping component
     """
 
-    type: Optional[Literal["ramp", "adaptive"]] = pd.Field()
-    initial: Optional[PositiveFloat] = pd.Field()
-    final: Optional[PositiveFloat] = pd.Field()
-    ramp_steps: Optional[int] = pd.Field(alias="rampSteps")
-    min: Optional[PositiveFloat] = pd.Field()
-    max: Optional[PositiveFloat] = pd.Field()
-    max_relative_change: Optional[PositiveFloat] = pd.Field(alias="maxRelativeChange")
-    convergence_limiting_factor: Optional[PositiveFloat] = pd.Field(
-        alias="convergenceLimitingFactor"
-    )
-    randomizer: Optional[Dict] = pd.Field()
-
-    @classmethod
-    def adaptive(cls):
-        """
-        returns default adaptive CFL settings
-        """
-        return cls(
-            type="adaptive",
-            min=0.1,
-            max=10000,
-            max_relative_change=1,
-            convergence_limiting_factor=0.25,
-        )
+    type: Optional[Literal["ramp"]] = pd.Field('ramp', const=True)
+    initial: Optional[PositiveFloat] = pd.Field(default=5)
+    final: Optional[PositiveFloat] = pd.Field(default=200)
+    ramp_steps: Optional[int] = pd.Field(default=40, alias="rampSteps")
+    randomizer: Optional[Dict] = pd.Field(ignore_on_schema_export=True)
 
     @classmethod
     def default_steady(cls):
@@ -465,6 +446,23 @@ class TimeSteppingCFL(Flow360BaseModel):
         return cls(initial=1, final=1e6, ramp_steps=30)
 
 
+class TimeSteppingCFLAdaptive(Flow360BaseModel):
+    """
+    CFL for time stepping component
+    """
+
+    type: Literal["adaptive"] = pd.Field("adaptive", const=True)
+    min: Optional[PositiveFloat] = pd.Field(default=0.1)
+    max: Optional[PositiveFloat] = pd.Field(default=10000)
+    max_relative_change: Optional[PositiveFloat] = pd.Field(default=1, alias="maxRelativeChange")
+    convergence_limiting_factor: Optional[PositiveFloat] = pd.Field(
+        default=0.25,
+        alias="convergenceLimitingFactor"
+    )
+    randomizer: Optional[Dict] = pd.Field(ignore_on_schema_export=True)
+
+
+
 # pylint: disable=E0213
 class TimeStepping(Flow360BaseModel):
     """
@@ -476,7 +474,7 @@ class TimeStepping(Flow360BaseModel):
     time_step_size: Optional[
         Union[pd.confloat(gt=0, allow_inf_nan=False), TimeStep, Literal["inf"]]
     ] = pd.Field(alias="timeStepSize", default="inf")
-    CFL: Optional[TimeSteppingCFL] = pd.Field()
+    CFL: Optional[Union[TimeSteppingCFLRamp, TimeSteppingCFLAdaptive]] = pd.Field()
 
     @classmethod
     def default_steady(cls):
@@ -487,7 +485,7 @@ class TimeStepping(Flow360BaseModel):
             physical_steps=1,
             time_step_size="inf",
             max_pseudo_steps=2000,
-            CFL=TimeSteppingCFL.default_steady(),
+            CFL=TimeSteppingCFLRamp.default_steady(),
         )
 
     @classmethod
@@ -499,7 +497,7 @@ class TimeStepping(Flow360BaseModel):
             physical_steps=physical_steps,
             time_step_size=time_step_size,
             max_pseudo_steps=40,
-            CFL=TimeSteppingCFL.default_unsteady(),
+            CFL=TimeSteppingCFLRamp.default_unsteady(),
         )
 
     # pylint: disable=invalid-name
@@ -532,10 +530,15 @@ class TimeStepping(Flow360BaseModel):
         if isinstance(value, tuple):
             return TimeStep(v=value[0], unit=value[1])
         return value
+    
+
 
     # pylint: disable=missing-class-docstring,too-few-public-methods
     class Config(Flow360BaseModel.Config):
         deprecated_aliases = [DeprecatedAlias(name="physical_steps", deprecated="maxPhysicalSteps")]
+
+
+
 
 
 class _GenericBoundaryWrapper(Flow360BaseModel):
@@ -625,6 +628,7 @@ class Geometry(Flow360BaseModel):
     # pylint: disable=missing-class-docstring,too-few-public-methods
     class Config(Flow360BaseModel.Config):
         exclude_on_flow360_export = ["mesh_unit", "mesh_unit_length"]
+        atmost_one_of = [['mesh_unit_length', 'mesh_unit']]
         allow_but_remove = ["meshName", "endianness"]
 
 

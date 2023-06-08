@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from functools import wraps
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 
 import numpy as np
 import pydantic as pd
@@ -128,7 +128,7 @@ class Flow360BaseModel(BaseModel):
     """
 
     # comments is allowed property at every level
-    comments: Optional[Any] = pd.Field()
+    comments: Optional[Any] = pd.Field(ignore_on_schema_export=True)
 
     def __init__(self, filename: str = None, **kwargs):
         if filename:
@@ -180,6 +180,18 @@ class Flow360BaseModel(BaseModel):
         require_one_of: Optional[List[str]] = []
         allow_but_remove: Optional[List[str]] = []
         deprecated_aliases: Optional[List[DeprecatedAlias]] = []
+
+        @staticmethod
+        def schema_extra(schema: Dict[str, Any], model: BaseModel) -> None:
+            for field_name, field in model.__fields__.items():
+                field_info = field.field_info
+                ignore = field_info.extra.get("ignore_on_schema_export", False)
+                if ignore:
+                    schema.get('properties', {}).pop(field_name, None)
+ 
+            schema.get('properties', {}).pop(TYPE_TAG_STR, None)
+
+
 
     # pylint: disable=no-self-argument
     @pd.root_validator()
