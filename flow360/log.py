@@ -90,7 +90,8 @@ class Logger:
 
     def info(self, message: str, *args) -> None:
         """Log (message) % (args) at info level"""
-        self._log(_level_value["INFO"], "INFO", message % args)
+        color_message = f"[cyan]{message}[/cyan]"
+        self._log(_level_value["INFO"], "INFO", color_message % args)
 
     def warning(self, message: str, *args) -> None:
         """Log (message) % (args) at warning level"""
