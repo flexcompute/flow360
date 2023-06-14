@@ -4,6 +4,7 @@ from flow360.log import log, set_logging_file, set_logging_level
 
 set_logging_level("DEBUG")
 set_logging_file("test_logs/test_file", "a", "DEBUG", 5, 500)
+os.mkdir("./test_logs")
 
 
 def test_debug():
@@ -36,6 +37,7 @@ def clean_up():
         if os.path.isfile(file_path):
             # Remove the file
             os.remove(file_path)
+    os.rmdir("./test_logs")
 
 
 for i in range(10):
