@@ -93,7 +93,7 @@ class Logger:
     def info(self, message: str, *args) -> None:
         """Log (message) % (args) at info level"""
         message = message % args
-        message = f"[cyan]{message}[/cyan]"
+        message = f"[white]{message}[/white]"
         self._log(_level_value["INFO"], "INFO", message)
 
     def warning(self, message: str, *args) -> None:
