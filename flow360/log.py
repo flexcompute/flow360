@@ -1,7 +1,7 @@
 """Logging for Flow360."""
-
+import os
 from typing import Union
-
+from datetime import datetime
 from rich.console import Console
 from typing_extensions import Literal
 
@@ -54,14 +54,78 @@ def _get_level_int(level: LogValue) -> int:
 class LogHandler:
     """Handle log messages depending on log level"""
 
-    def __init__(self, console: Console, level: LogValue):
+    def __init__(
+        self,
+        console: Console,
+        level: LogValue,
+        fname: str = None,
+        back_up_count: int = 10,
+        maxBytes: int = 10000,
+        write_to_file: bool = True,
+    ):
         self.level = _get_level_int(level)
         self.console = console
+        self.backupCount = back_up_count
+        self.maxBytes = maxBytes
+        self.fname = fname
+        self.write_to_file = write_to_file
 
     def handle(self, level, level_name, message):
         """Output log messages depending on log level"""
-        if level >= self.level:
+        try:
+            if self.fname is not None and self.shouldRollover(message):
+                self.doRollover()
+        except Exception as error:
+            self.console.log(
+                _level_print_style.get(_level_value["ERROR"], "unknown"),
+                "Fail to Rollover" + error,
+                sep=": ",
+            )
+
+        if level >= self.level and self.write_to_file:
             self.console.log(_level_print_style.get(level_name, "unknown"), message, sep=": ")
+
+    def rotate(self, source, dest):
+        if os.path.exists(source):
+            os.rename(source, dest)
+
+    def rotation_filename(self, name, counter):
+        current_time = datetime.now()
+        formatted_time = current_time.strftime("%Y-%m-%d-%H")
+        return name + formatted_time + "." + str(counter)
+
+    def doRollover(self):
+        """
+        Do a rollover, as described in __init__().
+        """
+        if self.backupCount > 0:
+            for i in range(self.backupCount - 1, 0, -1):
+                sfn = self.rotation_filename(self.fname, i)
+                dfn = self.rotation_filename(self.fname, i + 1)
+                if os.path.exists(sfn):
+                    if os.path.exists(dfn):
+                        os.remove(dfn)
+                    os.rename(sfn, dfn)
+            dfn = self.rotation_filename(self.fname, 1)
+            if os.path.exists(dfn):
+                os.remove(dfn)
+            self.rotate(self.fname, dfn)
+
+    def shouldRollover(self, message):
+        """
+        Determine if rollover should occur.
+
+        Basically, see if the supplied message would cause the file to exceed
+        the size limit we have.
+        """
+        # See bpo-45401: Never rollover anything other than regular files
+        if not os.path.exists(self.fname) or not os.path.isfile(self.fname):
+            return False
+        if self.maxBytes > 0:  # are we rolling over?
+            msg = "%s\n" % message
+            if os.path.getsize(self.fname) + len(msg) >= self.maxBytes:
+                return True
+        return False
 
 
 class Logger:
@@ -115,6 +179,10 @@ class Logger:
 log = Logger()
 
 
+def get_file_path(fname):
+    return os.path.dirname(__file__) + "/flow360/logs/" + fname
+
+
 def set_logging_level(level: LogValue = DEFAULT_LEVEL) -> None:
     """Set tidy3d console logging level priority.
     Parameters
@@ -145,6 +213,8 @@ def set_logging_file(
     fname: str,
     filemode: str = "w",
     level: LogValue = DEFAULT_LEVEL,
+    back_up_count: int = 10,
+    maxBytes: int = 10000,
 ) -> None:
     """Set a file to write log to, independently from the stdout and stderr
     output chosen using :meth:`set_logging_level`.
@@ -176,7 +246,9 @@ def set_logging_file(
         log.error(f"File {fname} could not be opened")
         return
 
-    log.handlers["file"] = LogHandler(Console(file=file, log_path=False), level)
+    log.handlers["file"] = LogHandler(
+        Console(file=file, log_path=False), level, fname, back_up_count, maxBytes
+    )
 
 
 # Set default logging output
