@@ -1,5 +1,6 @@
 import os
-from flow360.log import log, set_logging_level, set_logging_file
+
+from flow360.log import log, set_logging_file, set_logging_level
 
 set_logging_level("DEBUG")
 set_logging_file("test_logs/test_file", "a", "DEBUG", 5, 500)
@@ -37,9 +38,10 @@ def clean_up():
             os.remove(file_path)
 
 
-test_debug()
-test_info()
-test_warning()
-test_error()
-test_critical()
+for i in range(10):
+    test_debug()
+    test_info()
+    test_warning()
+    test_error()
+    test_critical()
 clean_up()

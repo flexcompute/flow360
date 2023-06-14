@@ -1,7 +1,8 @@
 """Logging for Flow360."""
 import os
-from typing import Union
 from datetime import datetime
+from typing import Union
+
 from rich.console import Console
 from typing_extensions import Literal
 
@@ -59,23 +60,21 @@ class LogHandler:
         console: Console,
         level: LogValue,
         fname: str = None,
-        back_up_count: int = 10,
-        maxBytes: int = 10000,
         write_to_file: bool = True,
     ):
         self.level = _get_level_int(level)
         self.console = console
-        self.backupCount = back_up_count
-        self.maxBytes = maxBytes
+        self.backup_count = 10
+        self.max_bytes = 10000
         self.fname = fname
         self.write_to_file = write_to_file
 
     def handle(self, level, level_name, message):
         """Output log messages depending on log level"""
         try:
-            if self.fname is not None and self.shouldRollover(message):
-                self.doRollover()
-        except Exception as error:
+            if self.fname is not None and self.should_roll_over(message):
+                self.do_roll_over()
+        except OSError as error:
             self.console.log(
                 _level_print_style.get(_level_value["ERROR"], "unknown"),
                 "Fail to Rollover" + error,
@@ -86,44 +85,75 @@ class LogHandler:
             self.console.log(_level_print_style.get(level_name, "unknown"), message, sep=": ")
 
     def rotate(self, source, dest):
-        if os.path.exists(source):
+        """
+        Rotate a log file by renaming the source file to the destination file.
+
+        Args:
+            source (str): Path of the source log file.
+            dest (str): Path of the destination log file.
+
+        Returns:
+            None
+        """
+        if os.path.exists(source) and not os.path.exists(dest):
             os.rename(source, dest)
 
     def rotation_filename(self, name, counter):
+        """
+        Generate a rotated filename based on the original filename and a counter.
+
+        Args:
+            name (str): Original filename or base filename.
+            counter (int): Counter value to be included in the rotated filename.
+
+        Returns:
+            str: Rotated filename with the format "{name}{formatted_time}.{counter}".
+
+        """
         current_time = datetime.now()
         formatted_time = current_time.strftime("%Y-%m-%d-%H")
         return name + formatted_time + "." + str(counter)
 
-    def doRollover(self):
+    def do_roll_over(self):
         """
-        Do a rollover, as described in __init__().
+        Generate a rotated filename based on the original filename and a counter.
+
+        Args:
+            name (str): Original filename or base filename.
+            counter (int): Counter value to be included in the rotated filename.
+
+        Returns:
+            str: Rotated filename with the format "{name}{formatted_time}.{counter}".
+
         """
-        if self.backupCount > 0:
-            for i in range(self.backupCount - 1, 0, -1):
+        if self.backup_count > 0:
+            for i in range(self.backup_count - 1, 0, -1):
                 sfn = self.rotation_filename(self.fname, i)
                 dfn = self.rotation_filename(self.fname, i + 1)
-                if os.path.exists(sfn):
-                    if os.path.exists(dfn):
+                if os.path.isfile(sfn):
+                    if os.path.isfile(dfn):
                         os.remove(dfn)
                     os.rename(sfn, dfn)
             dfn = self.rotation_filename(self.fname, 1)
-            if os.path.exists(dfn):
+            if os.path.isfile(dfn):
                 os.remove(dfn)
             self.rotate(self.fname, dfn)
 
-    def shouldRollover(self, message):
+    def should_roll_over(self, message):
         """
-        Determine if rollover should occur.
+        Determine if a rollover should occur based on the supplied message.
 
-        Basically, see if the supplied message would cause the file to exceed
-        the size limit we have.
+        Args:
+            message (str): The message to be logged.
+
+        Returns:
+            bool: True if a rollover should occur, False otherwise.
         """
         # See bpo-45401: Never rollover anything other than regular files
         if not os.path.exists(self.fname) or not os.path.isfile(self.fname):
             return False
-        if self.maxBytes > 0:  # are we rolling over?
-            msg = "%s\n" % message
-            if os.path.getsize(self.fname) + len(msg) >= self.maxBytes:
+        if self.max_bytes > 0:  # are we rolling over?
+            if os.path.getsize(self.fname) + len(message) >= self.max_bytes:
                 return True
         return False
 
@@ -179,10 +209,6 @@ class Logger:
 log = Logger()
 
 
-def get_file_path(fname):
-    return os.path.dirname(__file__) + "/flow360/logs/" + fname
-
-
 def set_logging_level(level: LogValue = DEFAULT_LEVEL) -> None:
     """Set tidy3d console logging level priority.
     Parameters
@@ -214,7 +240,7 @@ def set_logging_file(
     filemode: str = "w",
     level: LogValue = DEFAULT_LEVEL,
     back_up_count: int = 10,
-    maxBytes: int = 10000,
+    max_bytes: int = 10000,
 ) -> None:
     """Set a file to write log to, independently from the stdout and stderr
     output chosen using :meth:`set_logging_level`.
@@ -246,9 +272,9 @@ def set_logging_file(
         log.error(f"File {fname} could not be opened")
         return
 
-    log.handlers["file"] = LogHandler(
-        Console(file=file, log_path=False), level, fname, back_up_count, maxBytes
-    )
+    log.handlers["file"] = LogHandler(Console(file=file, log_path=False), level, fname)
+    log.handlers["file"].back_up_count = back_up_count
+    log.handlers["file"].max_bytes = max_bytes
 
 
 # Set default logging output
