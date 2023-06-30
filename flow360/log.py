@@ -6,6 +6,8 @@ from typing import Union
 from rich.console import Console
 from typing_extensions import Literal
 
+from .file_path import flow360_dir
+
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 LogValue = Union[int, LogLevel]
 
@@ -279,3 +281,7 @@ def set_logging_file(
 
 # Set default logging output
 set_logging_console()
+log_dir = flow360_dir + "logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+set_logging_file(os.path.join(log_dir, "flow360_python.log"), level="DEBUG")
