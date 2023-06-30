@@ -3,8 +3,7 @@ import os
 from flow360.log import log, set_logging_file, set_logging_level
 
 set_logging_level("DEBUG")
-set_logging_file("test_logs/test_file", "a", "DEBUG", 5, 500)
-os.mkdir("./test_logs")
+log.handlers["file"].disable_logging()
 
 
 def test_debug():
@@ -32,18 +31,4 @@ def test_critical():
 
 
 def clean_up():
-    for filename in os.listdir("./test_logs"):
-        file_path = os.path.join("./test_logs", filename)
-        if os.path.isfile(file_path):
-            # Remove the file
-            os.remove(file_path)
-    os.rmdir("./test_logs")
-
-
-for i in range(10):
-    test_debug()
-    test_info()
-    test_warning()
-    test_error()
-    test_critical()
-clean_up()
+    log.handlers["file"].enable_logging()

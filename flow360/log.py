@@ -5,7 +5,7 @@ from typing import Union
 
 from rich.console import Console
 from typing_extensions import Literal
-
+import flow360
 from .file_path import flow360_dir
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -62,17 +62,21 @@ class LogHandler:
         console: Console,
         level: LogValue,
         fname: str = None,
-        write_to_file: bool = True,
+        log_enabled: bool = True,
     ):
         self.level = _get_level_int(level)
         self.console = console
         self.backup_count = 10
         self.max_bytes = 10000
         self.fname = fname
-        self.write_to_file = write_to_file
+        self.log_enabled = log_enabled
+        self.previous_logged_time = None
+        self.previous_logged_version = None
 
     def handle(self, level, level_name, message):
         """Output log messages depending on log level"""
+        if not self.log_enabled:
+            return
         try:
             if self.fname is not None and self.should_roll_over(message):
                 self.do_roll_over()
@@ -82,9 +86,33 @@ class LogHandler:
                 "Fail to Rollover" + error,
                 sep=": ",
             )
+        current_time = datetime.now().strftime("%Y-%m-%d-%H")
+        if level >= self.level:
+            if (
+                self.previous_logged_time != current_time
+                or self.previous_logged_version != flow360.__version__
+            ):
+                self.previous_logged_time = current_time
+                self.previous_logged_version = flow360.__version__
+                self.console.log(f"{current_time}, version {flow360.__version__}\n")
 
-        if level >= self.level and self.write_to_file:
-            self.console.log(_level_print_style.get(level_name, "unknown"), message, sep=": ")
+            self.console.log(
+                _level_print_style.get(level_name, "unknown"),
+                message,
+                sep=": ",
+            )
+
+    def disable_logging(self):
+        """
+        Disable logging handler
+        """
+        self.log_enabled = False
+
+    def enable_logging(self):
+        """
+        Enable logging handler
+        """
+        self.log_enabled = True
 
     def rotate(self, source, dest):
         """
@@ -112,9 +140,7 @@ class LogHandler:
             str: Rotated filename with the format "{name}{formatted_time}.{counter}".
 
         """
-        current_time = datetime.now()
-        formatted_time = current_time.strftime("%Y-%m-%d-%H")
-        return name + formatted_time + "." + str(counter)
+        return name.rsplit(".log", 1)[0] + str(counter) + ".log"
 
     def do_roll_over(self):
         """
@@ -239,7 +265,7 @@ def set_logging_console(stderr: bool = False) -> None:
 
 def set_logging_file(
     fname: str,
-    filemode: str = "w",
+    filemode: str = "a",
     level: LogValue = DEFAULT_LEVEL,
     back_up_count: int = 10,
     max_bytes: int = 10000,
