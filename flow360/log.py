@@ -2,12 +2,12 @@
 import os
 from datetime import datetime
 from typing import Union
+
 from rich.console import Console
 from typing_extensions import Literal
 
-from .version import __version__ as version
-
 from .file_path import flow360_dir
+from .version import __version__ as version
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 LogValue = Union[int, LogLevel]
@@ -55,6 +55,7 @@ def _get_level_int(level: LogValue) -> int:
 
 
 # pylint: disable=too-few-public-methods
+# pylint: disable=too-many-instance-attributes
 class LogHandler:
     """Handle log messages depending on log level"""
 

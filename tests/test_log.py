@@ -1,6 +1,6 @@
 import os
 
-from flow360.log import log, set_logging_file, set_logging_level
+from flow360.log import log, set_logging_level
 
 set_logging_level("DEBUG")
 log.handlers["file"].disable_logging()
