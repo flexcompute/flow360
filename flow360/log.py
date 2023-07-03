@@ -2,10 +2,11 @@
 import os
 from datetime import datetime
 from typing import Union
-
 from rich.console import Console
 from typing_extensions import Literal
-import flow360
+
+from .version import __version__ as version
+
 from .file_path import flow360_dir
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -88,13 +89,10 @@ class LogHandler:
             )
         current_time = datetime.now().strftime("%Y-%m-%d-%H")
         if level >= self.level:
-            if (
-                self.previous_logged_time != current_time
-                or self.previous_logged_version != flow360.__version__
-            ):
+            if self.previous_logged_time != current_time or self.previous_logged_version != version:
                 self.previous_logged_time = current_time
-                self.previous_logged_version = flow360.__version__
-                self.console.log(f"{current_time}, version {flow360.__version__}\n")
+                self.previous_logged_version = version
+                self.console.log(f"{current_time}, version {version}\n")
 
             self.console.log(
                 _level_print_style.get(level_name, "unknown"),
@@ -140,7 +138,8 @@ class LogHandler:
             str: Rotated filename with the format "{name}{formatted_time}.{counter}".
 
         """
-        return name.rsplit(".log", 1)[0] + str(counter) + ".log"
+
+        return name + str(counter)
 
     def do_roll_over(self):
         """
