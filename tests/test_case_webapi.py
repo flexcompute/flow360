@@ -7,6 +7,8 @@ from flow360.log import log
 from .mock_server import mock_response
 from .utils import mock_id
 
+log.log_to_file = False
+
 
 def test_case(mock_response):
     case = Case(id=mock_id)

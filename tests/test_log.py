@@ -3,7 +3,7 @@ import os
 from flow360.log import log, set_logging_level
 
 set_logging_level("DEBUG")
-log.handlers["file"].disable_logging()
+log.log_to_file = False
 
 
 def test_debug():

@@ -64,21 +64,17 @@ class LogHandler:
         console: Console,
         level: LogValue,
         fname: str = None,
-        log_enabled: bool = True,
     ):
         self.level = _get_level_int(level)
         self.console = console
         self.backup_count = 10
         self.max_bytes = 10000
         self.fname = fname
-        self.log_enabled = log_enabled
         self.previous_logged_time = None
         self.previous_logged_version = None
 
     def handle(self, level, level_name, message):
         """Output log messages depending on log level"""
-        if not self.log_enabled:
-            return
         try:
             if self.fname is not None and self.should_roll_over(message):
                 self.do_roll_over()
@@ -100,18 +96,6 @@ class LogHandler:
                 message,
                 sep=": ",
             )
-
-    def disable_logging(self):
-        """
-        Disable logging handler
-        """
-        self.log_enabled = False
-
-    def enable_logging(self):
-        """
-        Enable logging handler
-        """
-        self.log_enabled = True
 
     def rotate(self, source, dest):
         """
@@ -191,10 +175,13 @@ class Logger:
 
     def __init__(self):
         self.handlers = {}
+        self.log_to_file = True
 
     def _log(self, level: int, level_name: str, message: str) -> None:
         """Distribute log messages to all handlers"""
-        for handler in self.handlers.values():
+        for handler_type, handler in self.handlers.items():
+            if not self.log_to_file and handler_type == "file":
+                continue
             handler.handle(level, level_name, message)
 
     def log(self, level: LogValue, message: str, *args) -> None:
