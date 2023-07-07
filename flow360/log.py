@@ -113,7 +113,7 @@ class LogHandler:
             max_wait_time = 5
             retry_delay = 0.1
             start_time = time.time()
-            while True:
+            while time.time() - start_time < max_wait_time:
                 try:
                     os.rename(source, dest)
                     break
@@ -129,6 +129,7 @@ class LogHandler:
                             str(error),
                             sep=": ",
                         )
+                        break
                     else:
                         time.sleep(retry_delay)
 
