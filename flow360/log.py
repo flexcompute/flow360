@@ -109,7 +109,14 @@ class LogHandler:
             None
         """
         if os.path.exists(source) and not os.path.exists(dest):
-            os.rename(source, dest)
+            try:
+                os.rename(source, dest)
+            except FileExistsError as error:
+                log.error(error)
+            except IsADirectoryError as error:
+                log.error(error)
+            except NotADirectoryError as error:
+                log.error(error)
 
     def rotation_filename(self, name, counter):
         """
@@ -165,8 +172,11 @@ class LogHandler:
         if not os.path.exists(self.fname) or not os.path.isfile(self.fname):
             return False
         if self.max_bytes > 0:  # are we rolling over?
-            if os.path.getsize(self.fname) + len(message) >= self.max_bytes:
-                return True
+            try:
+                if os.path.getsize(self.fname) + len(message) >= self.max_bytes:
+                    return True
+            except OSError as error:
+                log.error(error)
         return False
 
 

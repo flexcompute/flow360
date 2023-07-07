@@ -30,8 +30,4 @@ def test_critical():
     log.critical("Critical log string %s， number %d", "arg", 1)
 
 
-def clean_up():
-    log.handlers["file"].enable_logging()
-
-
 Logger.log_to_file = True
