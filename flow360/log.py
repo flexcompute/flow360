@@ -130,8 +130,8 @@ class LogHandler:
                             sep=": ",
                         )
                         break
-                    else:
-                        time.sleep(retry_delay)
+
+                    time.sleep(retry_delay)
 
     def rotation_filename(self, name, counter):
         """
