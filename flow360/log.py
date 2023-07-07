@@ -82,7 +82,7 @@ class LogHandler:
         except OSError as error:
             self.console.log(
                 _level_print_style.get(_level_value["ERROR"], "unknown"),
-                "Fail to Rollover" + error,
+                "Fail to Rollover" + str(error),
                 sep=": ",
             )
         current_time = datetime.now().strftime("%Y-%m-%d-%H")
