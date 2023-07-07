@@ -173,9 +173,10 @@ class LogHandler:
 class Logger:
     """Custom logger to avoid the complexities of the logging module"""
 
+    log_to_file = False
+
     def __init__(self):
         self.handlers = {}
-        self.log_to_file = True
 
     def _log(self, level: int, level_name: str, message: str) -> None:
         """Distribute log messages to all handlers"""

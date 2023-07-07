@@ -1,9 +1,9 @@
 import os
 
-from flow360.log import log, set_logging_level
+from flow360.log import Logger, log, set_logging_level
 
 set_logging_level("DEBUG")
-log.log_to_file = False
+Logger.log_to_file = False
 
 
 def test_debug():
@@ -32,3 +32,6 @@ def test_critical():
 
 def clean_up():
     log.handlers["file"].enable_logging()
+
+
+Logger.log_to_file = True
