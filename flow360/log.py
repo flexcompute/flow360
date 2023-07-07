@@ -1,5 +1,6 @@
 """Logging for Flow360."""
 import os
+import time
 from datetime import datetime
 from typing import Union
 
@@ -109,14 +110,22 @@ class LogHandler:
             None
         """
         if os.path.exists(source) and not os.path.exists(dest):
-            try:
-                os.rename(source, dest)
-            except FileExistsError as error:
-                log.error(error)
-            except IsADirectoryError as error:
-                log.error(error)
-            except NotADirectoryError as error:
-                log.error(error)
+            max_retries = 5
+            retry_delay = 1
+            for retry_count in range(max_retries):
+                try:
+                    os.rename(source, dest)
+                except PermissionError as error:
+                    if retry_count < max_retries - 1:
+                        time.sleep(retry_delay)
+                    else:
+                        log.error(error)
+                except FileExistsError as error:
+                    log.error(error)
+                except IsADirectoryError as error:
+                    log.error(error)
+                except NotADirectoryError as error:
+                    log.error(error)
 
     def rotation_filename(self, name, counter):
         """
