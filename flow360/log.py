@@ -3,7 +3,7 @@ import os
 import time
 from datetime import datetime
 from typing import Union
-import fcntl
+
 from rich.console import Console
 from typing_extensions import Literal
 
@@ -115,9 +115,8 @@ class LogHandler:
             start_time = time.time()
             while True:
                 try:
-                    with open(source, "a") as file:
-                        os.rename(source, dest)
-                        break
+                    os.rename(source, dest)
+                    break
                 except (
                     PermissionError,
                     FileExistsError,
