@@ -3,7 +3,7 @@ import os
 import time
 from datetime import datetime
 from typing import Union
-
+import fcntl
 from rich.console import Console
 from typing_extensions import Literal
 
@@ -110,22 +110,28 @@ class LogHandler:
             None
         """
         if os.path.exists(source) and not os.path.exists(dest):
-            max_retries = 5
-            retry_delay = 1
-            for retry_count in range(max_retries):
+            max_wait_time = 5
+            retry_delay = 0.1
+            start_time = time.time()
+            while True:
                 try:
-                    os.rename(source, dest)
-                except PermissionError as error:
-                    if retry_count < max_retries - 1:
-                        time.sleep(retry_delay)
+                    with open(source, "a") as file:
+                        os.rename(source, dest)
+                        break
+                except (
+                    PermissionError,
+                    FileExistsError,
+                    IsADirectoryError,
+                    NotADirectoryError,
+                ) as error:
+                    if time.time() - start_time > max_wait_time:
+                        self.console.log(
+                            _level_print_style.get(_level_value["ERROR"], "unknown"),
+                            str(error),
+                            sep=": ",
+                        )
                     else:
-                        log.error(error)
-                except FileExistsError as error:
-                    log.error(error)
-                except IsADirectoryError as error:
-                    log.error(error)
-                except NotADirectoryError as error:
-                    log.error(error)
+                        time.sleep(retry_delay)
 
     def rotation_filename(self, name, counter):
         """
@@ -161,7 +167,7 @@ class LogHandler:
                 if os.path.isfile(sfn):
                     if os.path.isfile(dfn):
                         os.remove(dfn)
-                    os.rename(sfn, dfn)
+                    self.rotate(sfn, dfn)
             dfn = self.rotation_filename(self.fname, 1)
             if os.path.isfile(dfn):
                 os.remove(dfn)
@@ -185,7 +191,11 @@ class LogHandler:
                 if os.path.getsize(self.fname) + len(message) >= self.max_bytes:
                     return True
             except OSError as error:
-                log.error(error)
+                self.console.log(
+                    _level_print_style.get(_level_value["ERROR"], "unknown"),
+                    str(error),
+                    sep=": ",
+                )
         return False
 
 
