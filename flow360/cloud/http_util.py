@@ -24,11 +24,15 @@ def api_key_auth(request):
     if not key:
         if Env.current.name == "dev":
             raise AuthorisationError(
-                "API key not found for env=dev, please set it by commandline: flow360 configure --dev."
-            )
+                "API key not found for env=dev, "
+                "please set it via terminal: flow360 configure --dev\n"
+                "The API key can be found in the homepage by logging into your Flow360 account.\n"
+                "For detailed instructions refer to: https://github.com/flexcompute/Flow360#client-config-api-key")
         raise AuthorisationError(
-            f"API key not found for profile={UserConfig.profile}, please set it by commandline: flow360 configure."
-        )
+            f"API key not found for profile={UserConfig.profile}, "
+            "please set it via terminal: flow360 configure\n"
+            "The API key can be found in the homepage by logging into your Flow360 account.\n"
+            "For detailed instructions refer to: https://github.com/flexcompute/Flow360#client-config-api-key")
     request.headers["simcloud-api-key"] = key
     request.headers["flow360-python-version"] = __version__
     if Env.impersonate:
@@ -58,7 +62,17 @@ def http_interceptor(func):
             raise WebError(f"Web {args[1]}: Bad request error: {resp.json()['error']}")
 
         if resp.status_code == 401:
-            raise AuthorisationError("Unauthorized.")
+            if Env.current.name == "dev":
+                raise AuthorisationError(
+                    "API key was rejected for env=dev, "
+                    "please update via terminal: flow360 configure --dev\n"
+                    "The API key can be found in the homepage by logging into your Flow360 account.\n"
+                    "For detailed instructions refer to: https://github.com/flexcompute/Flow360#client-config-api-key")
+            raise AuthorisationError(
+                f"API key was rejected for profile={UserConfig.profile}, "
+                "please update it via terminal: flow360 configure\n"
+                "The API key can be found in the homepage by logging into your Flow360 account.\n"
+                "For detailed instructions refer to: https://github.com/flexcompute/Flow360#client-config-api-key")
 
         if resp.status_code == 404:
             raise WebNotFoundError(f"Web {args[1]}: Not found error: {resp.json()}")
