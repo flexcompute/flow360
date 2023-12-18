@@ -598,7 +598,7 @@ class AdaptiveCFL(Flow360BaseModel):
 
 
 # pylint: disable=E0213
-class TimeStepping(Flow360BaseModel, metaclass=ABCMeta):
+class BaseTimeStepping(Flow360BaseModel, metaclass=ABCMeta):
     """
     Base class for time stepping component
     """
@@ -619,7 +619,7 @@ class TimeStepping(Flow360BaseModel, metaclass=ABCMeta):
 
 
 # pylint: disable=E0213
-class SteadyTimeStepping(TimeSteppingBase):
+class SteadyTimeStepping(BaseTimeStepping):
     """
     Steady time stepping component
     """
@@ -629,13 +629,13 @@ class SteadyTimeStepping(TimeSteppingBase):
 
 
 # pylint: disable=E0213
-class UnsteadyTimeStepping(TimeSteppingBase):
+class UnsteadyTimeStepping(BaseTimeStepping):
     """
     Unsteady time stepping component
     """
 
     physical_steps: Optional[PositiveInt] = pd.Field(alias="physicalSteps")
-    time_step_size: Optional[TimeType.Postiive] = pd.Field(alias="timeStepSize")
+    time_step_size: Optional[TimeType.Positive] = pd.Field(alias="timeStepSize")
 
 
 TimeStepping = Union[SteadyTimeStepping, UnsteadyTimeStepping]
@@ -1814,7 +1814,7 @@ class FreestreamLegacy(LegacyModel):
         return _FluidPropertiesTempModel.parse_obj(model).fluid
 
 
-class TimeSteppingLegacy(TimeStepping, LegacyModel):
+class TimeSteppingLegacy(UnsteadyTimeStepping, LegacyModel):
     """:class: `TimeSteppingLegacy` class"""
 
     time_step_size: Optional[Union[Literal["inf"], PositiveFloat]] = pd.Field(
