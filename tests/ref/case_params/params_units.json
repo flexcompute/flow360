@@ -63,6 +63,7 @@
     },
     "timeStepping": {
         "maxPseudoSteps": 500,
+        "physicalSteps": 20,
         "timeStepSize": {
             "value": 1.2,
             "units": "s"

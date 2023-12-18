@@ -38,7 +38,7 @@ from flow360.component.flow360_params.flow360_params import (
     SubsonicInflow,
     SubsonicOutflowMach,
     SubsonicOutflowPressure,
-    TimeStepping,
+    UnsteadyTimeStepping,
     VolumeZones,
     WallFunction,
 )
@@ -171,9 +171,10 @@ def test_flow360param():
 def test_flow360param1():
     with flow360.SI_unit_system:
         params = Flow360Params(freestream=FreestreamFromVelocity(velocity=10 * u.m / u.s))
-        assert params.time_stepping.max_pseudo_steps is None
-        params.time_stepping = TimeStepping(physical_steps=100)
-        assert params
+        assert params.time_stepping.max_pseudo_steps is 2000
+        with fl.SI_unit_system:
+            params.time_stepping = TimeStepping(physical_steps=100, time_step_size=2 * u.s)
+            assert params
 
 
 def test_tuple_from_yaml():
@@ -251,7 +252,7 @@ def test_depracated(capfd):
     expected = f'WARNING: "tolerance" is deprecated. Use "absolute_tolerance" OR "absoluteTolerance" instead'
     assert expected in clear_formatting(captured.out)
 
-    ns = fl.TimeStepping(maxPhysicalSteps=10)
+    ns = fl.TimeStepping(maxPhysicalSteps=10, time_step_size=1.3 * u.s)
     captured = capfd.readouterr()
     expected = f'WARNING: "maxPhysicalSteps" is deprecated. Use "physical_steps" OR "physicalSteps" instead'
     assert expected in clear_formatting(captured.out)
@@ -269,7 +270,10 @@ def test_params_with_units():
             ),
             freestream=fl.FreestreamFromVelocity(velocity=286, alpha=3.06),
             time_stepping=fl.TimeStepping(
-                max_pseudo_steps=500, CFL=fl.AdaptiveCFL(), time_step_size=1.2 * u.s
+                max_pseudo_steps=500,
+                CFL=fl.AdaptiveCFL(),
+                time_step_size=1.2 * u.s,
+                physical_steps=20,
             ),
             boundaries={
                 "1": fl.NoSlipWall(name="wing", velocity=(1, 2, 3) * u.km / u.hr),

@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    NoReturn,
     Optional,
     Tuple,
     Union,
@@ -597,20 +598,16 @@ class AdaptiveCFL(Flow360BaseModel):
 
 
 # pylint: disable=E0213
-class TimeStepping(Flow360BaseModel):
+class TimeStepping(Flow360BaseModel, metaclass=ABCMeta):
     """
-    Time stepping component
+    Base class for time stepping component
     """
 
-    physical_steps: Optional[PositiveInt] = pd.Field(alias="physicalSteps")
-    max_pseudo_steps: Optional[pd.conint(gt=0, le=100000)] = pd.Field(alias="maxPseudoSteps")
-    time_step_size: Optional[Union[Literal["inf"], TimeType.Positive]] = pd.Field(
-        alias="timeStepSize", default="inf"
-    )
+    max_pseudo_steps: Optional[pd.conint(gt=0, le=100000)] = pd.Field(2000, alias="maxPseudoSteps")
     CFL: Optional[Union[RampCFL, AdaptiveCFL]] = pd.Field()
 
     # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> TimeStepping:
+    def to_solver(self, params: Flow360Params, **kwargs) -> BaseTimeStepping:
         """
         returns configuration object in flow360 units system
         """
@@ -619,6 +616,29 @@ class TimeStepping(Flow360BaseModel):
     # pylint: disable=missing-class-docstring,too-few-public-methods
     class Config(Flow360BaseModel.Config):
         deprecated_aliases = [DeprecatedAlias(name="physical_steps", deprecated="maxPhysicalSteps")]
+
+
+# pylint: disable=E0213
+class SteadyTimeStepping(TimeSteppingBase):
+    """
+    Steady time stepping component
+    """
+
+    physical_steps: Literal[1] = pd.Field(1, alias="physicalSteps", const=True)
+    time_step_size: Literal["inf"] = pd.Field("inf", alias="timeStepSize", const=True)
+
+
+# pylint: disable=E0213
+class UnsteadyTimeStepping(TimeSteppingBase):
+    """
+    Unsteady time stepping component
+    """
+
+    physical_steps: Optional[PositiveInt] = pd.Field(alias="physicalSteps")
+    time_step_size: Optional[TimeType.Postiive] = pd.Field(alias="timeStepSize")
+
+
+TimeStepping = Union[SteadyTimeStepping, UnsteadyTimeStepping]
 
 
 class _GenericBoundaryWrapper(Flow360BaseModel):
@@ -1422,7 +1442,9 @@ class Flow360Params(Flow360BaseModel):
     initial_condition: Optional[InitialConditions] = pd.Field(
         alias="initialCondition", discriminator="type"
     )
-    time_stepping: Optional[TimeStepping] = pd.Field(alias="timeStepping", default=TimeStepping())
+    time_stepping: Optional[TimeStepping] = pd.Field(
+        alias="timeStepping", default=SteadyTimeStepping()
+    )
     navier_stokes_solver: Optional[NavierStokesSolver] = pd.Field(alias="navierStokesSolver")
     turbulence_model_solver: Optional[TurbulenceModelSolverTypes] = pd.Field(
         alias="turbulenceModelSolver", discriminator="model_type"
