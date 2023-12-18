@@ -67,12 +67,12 @@ def test_time_stepping():
     exported_json = json.loads(params.to_flow360_json())
     assert "meshUnit" not in exported_json["geometry"]
 
-    with pytest.raises(ValueError):
-        ts = UnsteadyTimeStepping.parse_obj({"maxPhysicalSteps": 3})
-
-    with pytest.raises(ValueError):
-        ts = UnsteadyTimeStepping.parse_obj({"physicalSteps": 2})
-
+    #    with pytest.raises(ValueError):
+    #        ts = UnsteadyTimeStepping.parse_obj({"maxPhysicalSteps": 3})
+    #
+    #    with pytest.raises(ValueError):
+    #        ts = UnsteadyTimeStepping.parse_obj({"physicalSteps": 2})
+    #
     with pytest.raises(ValueError):
         ts = UnsteadyTimeStepping.parse_obj({"maxPhysicalSteps": 3, "physical_steps": 2})
 

@@ -57,22 +57,23 @@ def to_file_from_file_test(obj):
 
 
 def compare_to_ref(obj, ref_path, content_only=False):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filename = os.path.join(tmpdir, f"file{os.path.splitext(ref_path)[1]}")
-        obj.to_file(filename)
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    tmpdir = "/home/feilin/debug/pydantic"
+    filename = os.path.join(tmpdir, f"file{os.path.splitext(ref_path)[1]}")
+    obj.to_file(filename)
 
-        if not content_only:
-            assert file_compare(filename, ref_path)
-        else:
-            assert os.path.splitext(ref_path)[1] == ".json"
-            with open(filename) as fh:
-                a = json.load(fh)
-            with open(ref_path) as fh:
-                b = json.load(fh)
-            equal = sorted(a.items()) == sorted(b.items())
-            if equal is False:
-                show_dict_diff(a, b)
-                assert equal
+    if not content_only:
+        assert file_compare(filename, ref_path)
+    else:
+        assert os.path.splitext(ref_path)[1] == ".json"
+        with open(filename) as fh:
+            a = json.load(fh)
+        with open(ref_path) as fh:
+            b = json.load(fh)
+        equal = sorted(a.items()) == sorted(b.items())
+        if equal is False:
+            show_dict_diff(a, b)
+            assert equal
 
 
 @pytest.fixture()
