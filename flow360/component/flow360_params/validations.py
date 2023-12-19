@@ -3,18 +3,18 @@ validation logic
 """
 
 from ...log import log
-from .flow360_params import (
-    ExpressionInitialCondition,
-    HeatTransferVolumeZone,
+from .boundaries import (
     RotationallyPeriodic,
     SlipWall,
     SolidAdiabaticWall,
     SolidIsothermalWall,
     TranslationallyPeriodic,
-    UnsteadyTimeStepping,
     WallFunction,
 )
+from .initial_condition import ExpressionInitialCondition
 from .solvers import TransitionModelSolver, TurbulenceModelSolver
+from .time_stepping import UnsteadyTimeStepping
+from .volume_zones import HeatTransferVolumeZone
 
 
 def _check_tri_quad_boundaries(values):
