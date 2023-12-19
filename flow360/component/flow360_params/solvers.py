@@ -392,6 +392,7 @@ class HeatEquationSolver(Flow360BaseModel):
 
     absolute_tolerance: Optional[PositiveFloat] = pd.Field(alias="absoluteTolerance")
     equation_eval_frequency: Optional[PositiveInt] = pd.Field(alias="equationEvalFrequency")
+    update_jacobian_frequency: Optional[PositiveInt] = pd.Field(1, alias="updateJacobianFrequency")
     linear_solver: Optional[LinearSolver] = pd.Field(alias="linearSolver", default=LinearSolver())
 
     # pylint: disable=missing-class-docstring,too-few-public-methods
@@ -424,8 +425,8 @@ class TransitionModelSolver(GenericFlowSolverSettings):
         "AmplificationFactorTransport", alias="modelType", const=True
     )
     linear_solver: Optional[LinearSolver] = pd.Field(alias="linearSolver", default=LinearSolver())
-    update_jacobian_frequency: Optional[PositiveInt] = pd.Field(alias="updateJacobianFrequency")
-    equation_eval_frequency: Optional[PositiveInt] = pd.Field(alias="equationEvalFrequency")
+    update_jacobian_frequency: Optional[PositiveInt] = pd.Field(4, alias="updateJacobianFrequency")
+    equation_eval_frequency: Optional[PositiveInt] = pd.Field(4, alias="equationEvalFrequency")
     max_force_jac_update_physical_steps: Optional[NonNegativeInt] = pd.Field(
         alias="maxForceJacUpdatePhysicalSteps"
     )
