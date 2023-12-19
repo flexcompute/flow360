@@ -1,3 +1,12 @@
+from abc import ABCMeta
+from typing import Optional, Union
+
+import pydantic as pd
+
+from .params_base import Flow360BaseModel
+from .unit_system import VelocityType
+
+
 class Boundary(Flow360BaseModel, metaclass=ABCMeta):
     """Basic Boundary class"""
 
@@ -5,6 +14,10 @@ class Boundary(Flow360BaseModel, metaclass=ABCMeta):
     name: Optional[str] = pd.Field(
         None, title="Name", description="Optional unique name for boundary."
     )
+
+
+BoundaryVelocityType = Union[VelocityType.Vector, Tuple[StrictStr, StrictStr, StrictStr]]
+BoundaryAxisType = Union[Axis, Tuple[StrictStr, StrictStr, StrictStr]]
 
 
 class NoSlipWall(Boundary):

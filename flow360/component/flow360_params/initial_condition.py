@@ -1,3 +1,11 @@
+from typing import Union
+
+import pydantic as pd
+from typing_extensions import Literal
+
+from .params_base import Flow360BaseModel
+
+
 class InitialCondition(Flow360BaseModel):
     """:class:`InitialCondition` class"""
 

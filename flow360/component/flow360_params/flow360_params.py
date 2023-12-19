@@ -43,6 +43,7 @@ from ..types import (
     Vector,
 )
 from ..utils import _get_value_or_none, beta_feature
+from .boundaries import BoundaryType
 from .conversions import ExtraDimensionedProperty
 from .flow360_legacy import (
     LegacyModel,
@@ -71,6 +72,7 @@ from .flow360_output import (
     VolumeOutput,
     VolumeOutputLegacy,
 )
+from .initial_condition import InitialConditions
 from .params_base import (
     DeprecatedAlias,
     Flow360BaseModel,
@@ -94,7 +96,7 @@ from .solvers import (
     TurbulenceModelSolverLegacy,
     TurbulenceModelSolverTypes,
 )
-from .time_stepping import SteadyTimeStepping, UnsteadyTimeStepping
+from .time_stepping import SteadyTimeStepping, TimeStepping, UnsteadyTimeStepping
 from .unit_system import (
     AngularVelocityType,
     AreaType,
@@ -128,10 +130,7 @@ from .validations import (
     _check_equation_eval_frequency_for_unsteady_simulations,
     _check_tri_quad_boundaries,
 )
-from .volume_zones import BoundaryType, FluidDynamicsVolumeZone, VolumeZoneType
-
-BoundaryVelocityType = Union[VelocityType.Vector, Tuple[StrictStr, StrictStr, StrictStr]]
-BoundaryAxisType = Union[Axis, Tuple[StrictStr, StrictStr, StrictStr]]
+from .volume_zones import FluidDynamicsVolumeZone, VolumeZoneType
 
 
 # pylint: disable=invalid-name
