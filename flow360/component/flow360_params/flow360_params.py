@@ -391,6 +391,7 @@ class Boundaries(Flow360SortableBaseModel):
     def get_subtypes(cls) -> list:
         return list(get_args(_GenericBoundaryWrapper.__fields__["v"].type_))
 
+    # pylint: disable=no-self-argument
     @pd.root_validator(pre=True)
     def validate_boundary(cls, values):
         """Validator for boundary list section
@@ -410,12 +411,6 @@ class Boundaries(Flow360SortableBaseModel):
         returns configuration object in flow360 units system
         """
         return super().to_solver(params, **kwargs)
-
-
-class InitialConditionHeatTransfer(Flow360BaseModel):
-    """InitialConditionHeatTransfer"""
-
-    T_solid: Union[PositiveFloat, StrictStr] = pd.Field()
 
 
 class _GenericVolumeZonesWrapper(Flow360BaseModel):
@@ -446,6 +441,7 @@ class VolumeZones(Flow360SortableBaseModel):
     def get_subtypes(cls) -> list:
         return list(get_args(_GenericVolumeZonesWrapper.__fields__["v"].type_))
 
+    # pylint: disable=no-self-argument
     @pd.root_validator(pre=True)
     def validate_zone(cls, values):
         """Validator for zone list section
@@ -834,6 +830,7 @@ class BETDisk(Flow360BaseModel):
         alias="sectionalRadiuses", displayed="Sectional radiuses"
     )
 
+    # pylint: disable=no-self-argument
     @pd.validator("alphas")
     def check_alphas_in_order(cls, alpha):
         """
@@ -843,6 +840,7 @@ class BETDisk(Flow360BaseModel):
             raise ValueError("BET Disk: alphas are not in increasing order")
         return alpha
 
+    # pylint: disable=no-self-argument
     @pd.root_validator()
     def check_number_of_sections(cls, values):
         """
@@ -1041,6 +1039,7 @@ class Flow360Params(Flow360BaseModel):
         allow_but_remove = ["runControl", "testControl"]
         include_hash: bool = True
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_consistency_wall_function_and_surface_output(cls, values):
         """
@@ -1048,6 +1047,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_consistency_wall_function_and_surface_output(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_consistency_ddes_volume_output(cls, values):
         """
@@ -1055,6 +1055,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_consistency_ddes_volume_output(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_tri_quad_boundaries(cls, values):
         """
@@ -1062,6 +1063,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_tri_quad_boundaries(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_duplicate_boundary_name(cls, values):
         """
@@ -1069,6 +1071,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_duplicate_boundary_name(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_cht_solver_settings(cls, values):
         """
@@ -1076,6 +1079,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_cht_solver_settings(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validaotr
     def check_equation_eval_frequency_for_unsteady_simulations(cls, values):
         """
@@ -1083,6 +1087,7 @@ class Flow360Params(Flow360BaseModel):
         """
         return _check_equation_eval_frequency_for_unsteady_simulations(values)
 
+    # pylint: disable=no-self-argument
     @pd.root_validator
     def check_aero_acoustics(cls, values):
         """

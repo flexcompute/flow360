@@ -1,9 +1,16 @@
+"""
+Volume zones parameters
+"""
+
+# pylint: disable=too-many-lines
+# pylint: disable=unused-import
 from __future__ import annotations
 
 from abc import ABCMeta
 from typing import Optional, Union
 
 import pydantic as pd
+from pydantic import StrictStr
 from typing_extensions import Literal
 
 from ..types import (
@@ -122,13 +129,6 @@ class ReferenceFrameOmegaRadians(Flow360BaseModel):
     center: LengthType.Point = pd.Field(alias="centerOfRotation")
     axis: Axis = pd.Field(alias="axisOfRotation")
 
-    # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> ReferenceFrameOmegaRadians:
-        """
-        returns configuration object in flow360 units system
-        """
-        return super().to_solver(params, **kwargs)
-
 
 class ReferenceFrameOmegaDegrees(Flow360BaseModel):
     """:class:`ReferenceFrameOmegaDegrees` class for setting up reference frame
@@ -155,13 +155,6 @@ class ReferenceFrameOmegaDegrees(Flow360BaseModel):
     omega_degrees: float = pd.Field(alias="omegaDegrees")
     center: LengthType.Point = pd.Field(alias="centerOfRotation")
     axis: Axis = pd.Field(alias="axisOfRotation")
-
-    # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> ReferenceFrameOmegaDegrees:
-        """
-        returns configuration object in flow360 units system
-        """
-        return super().to_solver(params, **kwargs)
 
 
 class ReferenceFrame(Flow360BaseModel):
@@ -198,7 +191,7 @@ class ReferenceFrame(Flow360BaseModel):
     axis: Axis = pd.Field(alias="axisOfRotation")
 
     # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> ReferenceFrameOmegaRadians:
+    def to_solver(self, params, **kwargs) -> ReferenceFrameOmegaRadians:
         """
         returns configuration object in flow360 units system
         """
@@ -212,6 +205,12 @@ class VolumeZoneBase(Flow360BaseModel, metaclass=ABCMeta):
     """Basic Boundary class"""
 
     model_type: str = pd.Field(alias="modelType")
+
+
+class InitialConditionHeatTransfer(Flow360BaseModel):
+    """InitialConditionHeatTransfer"""
+
+    T_solid: Union[PositiveFloat, StrictStr] = pd.Field()
 
 
 class HeatTransferVolumeZone(VolumeZoneBase):
@@ -238,13 +237,6 @@ class FluidDynamicsVolumeZone(VolumeZoneBase):
             ReferenceFrameDynamic,
         ]
     ] = pd.Field(alias="referenceFrame")
-
-    # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> FluidDynamicsVolumeZone:
-        """
-        returns configuration object in flow360 units system
-        """
-        return super().to_solver(params, **kwargs)
 
 
 VolumeZoneType = Union[FluidDynamicsVolumeZone, HeatTransferVolumeZone]

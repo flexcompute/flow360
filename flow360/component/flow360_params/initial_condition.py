@@ -1,3 +1,6 @@
+"""
+Initial condition parameters
+"""
 from typing import Union
 
 import pydantic as pd

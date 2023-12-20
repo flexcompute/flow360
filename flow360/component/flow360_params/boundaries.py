@@ -1,8 +1,13 @@
+"""
+Boundaries parameters
+"""
 from abc import ABCMeta
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import pydantic as pd
+from pydantic import StrictStr
 
+from ..types import Axis, PositiveFloat, PositiveInt, Vector
 from .params_base import Flow360BaseModel
 from .unit_system import VelocityType
 

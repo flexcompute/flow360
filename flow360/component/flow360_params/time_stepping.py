@@ -1,22 +1,17 @@
+"""
+Time stepping parameters
+"""
 from __future__ import annotations
 
 from abc import ABCMeta
+from typing import Dict, Optional, Union
 
 import pydantic as pd
 from typing_extensions import Literal
 
-from ..types import (
-    Axis,
-    Coordinate,
-    Dict,
-    NonNegativeFloat,
-    Optional,
-    PositiveFloat,
-    PositiveInt,
-    Union,
-    Vector,
-)
-from .params_base import Flow360BaseModel
+from ..types import PositiveFloat, PositiveInt
+from .params_base import DeprecatedAlias, Flow360BaseModel
+from .unit_system import TimeType
 
 
 class RampCFL(Flow360BaseModel):
@@ -67,13 +62,6 @@ class BaseTimeStepping(Flow360BaseModel, metaclass=ABCMeta):
 
     max_pseudo_steps: Optional[pd.conint(gt=0, le=100000)] = pd.Field(2000, alias="maxPseudoSteps")
     CFL: Optional[Union[RampCFL, AdaptiveCFL]] = pd.Field()
-
-    # pylint: disable=arguments-differ
-    def to_solver(self, params: Flow360Params, **kwargs) -> BaseTimeStepping:
-        """
-        returns configuration object in flow360 units system
-        """
-        return super().to_solver(params, **kwargs)
 
     # pylint: disable=missing-class-docstring,too-few-public-methods
     class Config(Flow360BaseModel.Config):
