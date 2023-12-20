@@ -4,25 +4,24 @@ import pydantic as pd
 import pytest
 
 import flow360 as fl
-from flow360.component.flow360_params.flow360_params import (
-    Flow360Params,
+from flow360.component.flow360_params.boundaries import (
     FreestreamBoundary,
     HeatFluxWall,
     IsothermalWall,
     MassInflow,
     MassOutflow,
-    MeshBoundary,
     NoSlipWall,
     SlidingInterfaceBoundary,
     SlipWall,
     SolidAdiabaticWall,
     SolidIsothermalWall,
-    SteadyTimeStepping,
     SubsonicInflow,
     SubsonicOutflowMach,
     SubsonicOutflowPressure,
     WallFunction,
 )
+from flow360.component.flow360_params.flow360_params import Flow360Params, MeshBoundary
+from flow360.component.flow360_params.time_stepping import SteadyTimeStepping
 from flow360.exceptions import Flow360ValidationError
 from tests.utils import compare_to_ref, to_file_from_file_test
 

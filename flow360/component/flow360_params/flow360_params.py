@@ -1080,7 +1080,7 @@ class Flow360Params(Flow360BaseModel):
         return _check_cht_solver_settings(values)
 
     # pylint: disable=no-self-argument
-    @pd.root_validaotr
+    @pd.root_validator
     def check_equation_eval_frequency_for_unsteady_simulations(cls, values):
         """
         check equation_eval_frequency for unsteady simulations

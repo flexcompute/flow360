@@ -9,28 +9,12 @@ import pytest
 import flow360
 import flow360 as fl
 from flow360 import units as u
-from flow360.component.flow360_params.flow360_params import (
-    ActuatorDisk,
-    AeroacousticOutput,
-    Flow360MeshParams,
-    Flow360Params,
-    FluidDynamicsVolumeZone,
-    ForcePerArea,
+from flow360.component.flow360_params.boundaries import (
     FreestreamBoundary,
-    FreestreamFromVelocity,
-    Geometry,
-    HeatEquationSolver,
-    HeatTransferVolumeZone,
-    InitialConditionHeatTransfer,
     IsothermalWall,
     MassInflow,
     MassOutflow,
-    MeshBoundary,
-    MeshSlidingInterface,
-    NavierStokesSolver,
     NoSlipWall,
-    ReferenceFrame,
-    SlidingInterface,
     SlidingInterfaceBoundary,
     SlipWall,
     SolidAdiabaticWall,
@@ -38,9 +22,29 @@ from flow360.component.flow360_params.flow360_params import (
     SubsonicInflow,
     SubsonicOutflowMach,
     SubsonicOutflowPressure,
-    UnsteadyTimeStepping,
-    VolumeZones,
     WallFunction,
+)
+from flow360.component.flow360_params.flow360_params import (
+    ActuatorDisk,
+    AeroacousticOutput,
+    Flow360MeshParams,
+    Flow360Params,
+    ForcePerArea,
+    FreestreamFromVelocity,
+    Geometry,
+    HeatEquationSolver,
+    MeshBoundary,
+    MeshSlidingInterface,
+    NavierStokesSolver,
+    SlidingInterface,
+    VolumeZones,
+)
+from flow360.component.flow360_params.time_stepping import UnsteadyTimeStepping
+from flow360.component.flow360_params.volume_zones import (
+    FluidDynamicsVolumeZone,
+    HeatTransferVolumeZone,
+    InitialConditionHeatTransfer,
+    ReferenceFrame,
 )
 from flow360.examples import OM6wing
 from flow360.exceptions import (

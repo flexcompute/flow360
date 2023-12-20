@@ -3,6 +3,7 @@ validation logic
 """
 
 from ...log import log
+from ..types import COMMENTS, TYPE_TAG_STR
 from .boundaries import (
     RotationallyPeriodic,
     SlipWall,
@@ -39,7 +40,17 @@ def _check_duplicate_boundary_name(values):
     boundaries = values.get("boundaries")
     boundary_names = set()
     if boundaries is not None:
+        print("patch_obj========start 1")
+        print(type(boundaries))
+        print(type(dict(boundaries)))
         for patch_name, patch_obj in dict(boundaries).items():
+            if patch_name in [COMMENTS, TYPE_TAG_STR]:
+                continue
+            print("patch_obj========start")
+            print(type(patch_obj))
+            print(patch_name)
+            print(patch_obj)
+            print("patch_obj========end")
             if patch_obj.name is not None:
                 boundary_name_curr = patch_obj.name
             else:
@@ -214,3 +225,4 @@ def _check_aero_acoustics(values):
                 log.warning(
                     "Aeroacoustic solver is inaccurate for simulations with SlipWall boundary condition."
                 )
+    return values
