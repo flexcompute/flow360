@@ -119,9 +119,6 @@ class NavierStokesSolver(GenericFlowSolverSettings):
         order upwind scheme and is the most stable. A value of 0.33 leads to a blended upwind/central scheme and is
         recommended for low subsonic flows leading to reduced dissipation
 
-    linear_iterations :
-        Number of linear solver iterations
-
     update_jacobian_frequency :
         Frequency at which the jacobian is updated.
 
@@ -157,7 +154,6 @@ class NavierStokesSolver(GenericFlowSolverSettings):
     CFL_multiplier: Optional[PositiveFloat] = pd.Field(
         1.0, alias="CFLMultiplier", displayed="CFL Multiplier"
     )
-    linear_iterations: Optional[PositiveInt] = pd.Field(alias="linearIterations")
     kappa_MUSCL: Optional[pd.confloat(ge=-1, le=1)] = pd.Field(
         -1, alias="kappaMUSCL", displayed="Kappa MUSCL"
     )
@@ -328,10 +324,10 @@ class TurbulenceModelSolver(GenericFlowSolverSettings, metaclass=ABCMeta):
     quadratic_constitutive_relation: Optional[bool] = pd.Field(
         False, alias="quadraticConstitutiveRelation"
     )
-    model_constants: Optional[TurbulenceModelConstants] = pd.Field(alias="modelConstants")
     reconstruction_gradient_limiter: Optional[float] = pd.Field(
         alias="reconstructionGradientLimiter"
     )
+    model_constants: Optional[TurbulenceModelConstants] = pd.Field(alias="modelConstants")
 
 
 class KOmegaSST(TurbulenceModelSolver):
@@ -483,6 +479,7 @@ class NavierStokesSolverLegacy(NavierStokesSolver, LegacyModel):
         alias="pressureCorrectionSolver"
     )
     randomizer: Optional[LinearIterationsRandomizer] = pd.Field()
+    linear_iterations: Optional[PositiveInt] = pd.Field(alias="linearIterations")
     linear_solver: Optional[LinearSolverLegacy] = pd.Field(
         alias="linearSolver", default=LinearSolverLegacy()
     )

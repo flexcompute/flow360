@@ -44,7 +44,6 @@
     "navierStokesSolver": {
         "relativeTolerance": 0.0,
         "CFLMultiplier": 1.0,
-        "linearIterations": 10,
         "kappaMUSCL": -1.0,
         "updateJacobianFrequency": 4,
         "equationEvalFrequency": 1,
@@ -52,7 +51,7 @@
         "orderOfAccuracy": 2,
         "numericalDissipationFactor": 1.0,
         "linearSolver": {
-            "maxIterations": 30,
+            "maxIterations": 10,
             "absoluteTolerance": 1e-10
         },
         "limitVelocity": false,
@@ -119,5 +118,5 @@
             }
         }
     },
-    "hash": "4601999f6544546e82008331fff0b83bcb6f194e0e21018ae1bf283d98eaaead"
+    "hash": "d49483f7be1455f9c2d9d521d6579cca0689b762611f0e559da27d193ac2f02b"
 }
