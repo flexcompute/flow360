@@ -27,7 +27,7 @@ jobs:
         run: poetry install --only=dev
       - name: Run black
         run: |
-            black --version
+            poetry run black --version
             poetry run black . --check
 
   isort:
