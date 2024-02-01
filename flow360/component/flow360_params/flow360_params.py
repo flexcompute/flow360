@@ -541,7 +541,9 @@ class FreestreamFromMach(FreestreamBase):
     Mach: PositiveFloat = pd.Field(displayed="Mach number")
     Mach_ref: Optional[PositiveFloat] = pd.Field(alias="MachRef", displayed="Reference Mach number")
     mu_ref: PositiveFloat = pd.Field(alias="muRef", displayed="Dynamic viscosity [non-dim]")
-    temperature: PositiveFloat = pd.Field(alias="Temperature", displayed="Temperature [K]")
+    temperature: Optional[PositiveFloat] = pd.Field(
+        alias="Temperature", displayed="Temperature [K]"
+    )
 
     # pylint: disable=arguments-differ, unused-argument
     def to_solver(self, params: Flow360Params, **kwargs) -> FreestreamFromMach:
@@ -562,7 +564,9 @@ class FreestreamFromMachReynolds(FreestreamBase):
     Mach: PositiveFloat = pd.Field(displayed="Mach number")
     Mach_ref: Optional[PositiveFloat] = pd.Field(alias="MachRef", displayed="Reference Mach number")
     Reynolds: PositiveFloat = pd.Field(displayed="Reynolds number")
-    temperature: PositiveFloat = pd.Field(alias="Temperature", displayed="Temperature [K]")
+    temperature: Optional[PositiveFloat] = pd.Field(
+        alias="Temperature", displayed="Temperature [K]"
+    )
 
     # pylint: disable=arguments-differ, unused-argument
     def to_solver(self, params: Flow360Params, **kwargs) -> FreestreamFromMach:
@@ -581,7 +585,9 @@ class ZeroFreestream(FreestreamBase):
     Mach: Literal[0] = pd.Field(0, const=True, displayed="Mach number")
     Mach_ref: pd.confloat(gt=1.0e-12) = pd.Field(alias="MachRef", displayed="Reference Mach number")
     mu_ref: PositiveFloat = pd.Field(alias="muRef", displayed="Dynamic viscosity [non-dim]")
-    temperature: PositiveFloat = pd.Field(alias="Temperature", displayed="Temperature [K]")
+    temperature: Optional[PositiveFloat] = pd.Field(
+        alias="Temperature", displayed="Temperature [K]"
+    )
 
     # pylint: disable=arguments-differ, unused-argument
     def to_solver(self, params: Flow360Params, **kwargs) -> ZeroFreestream:
@@ -625,7 +631,10 @@ class FreestreamFromVelocity(FreestreamBase):
         mach = solver_values.pop("velocity")
         mach_ref = solver_values.pop("velocity_ref", None)
         mu_ref = solver_values.pop("viscosity")
-        temperature = solver_values.pop("temperature").to("K")
+
+        temperature = None
+        if solver_values.get("temperature") is not None:
+            temperature = solver_values.pop("temperature").to("K")
 
         if solver_values.get("model_type") is not None:
             solver_values.pop("model_type")
