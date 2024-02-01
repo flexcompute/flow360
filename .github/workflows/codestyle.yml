@@ -11,9 +11,39 @@ name: Codestyle checking
 on:
   workflow_call:
   workflow_dispatch:
-    
+
 jobs:
-  black:
+  black_3_11_4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.4'
+          cache: 'poetry'
+      - name: Install black
+        run: poetry install --only=dev
+      - name: Run black
+        run: poetry run black . --check
+
+  black_3_10_12:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.12'
+          cache: 'poetry'
+      - name: Install black
+        run: poetry install --only=dev
+      - name: Run black
+        run: poetry run black . --check
+
+  black_3_9:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
