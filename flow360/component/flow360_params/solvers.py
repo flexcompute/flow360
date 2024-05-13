@@ -150,6 +150,9 @@ class NavierStokesSolver(GenericFlowSolverSettings):
         A factor in the range [0.01, 1.0] which exponentially reduces the dissipation of the numerical flux.
         The recommended starting value for most low-dissipation runs is 0.2
 
+    low_dissipation_density_cutoff :
+        Value of local density below which a node is set to be default Roe scheme for the rest of time.
+
     linear_solver:
         Linear solver settings
 
@@ -182,6 +185,9 @@ class NavierStokesSolver(GenericFlowSolverSettings):
     numerical_dissipation_factor: Optional[pd.confloat(ge=0.01, le=1)] = pd.Field(
         1, alias="numericalDissipationFactor"
     )
+
+    low_dissipation_density_cutoff = Optional[pd.confloat(ge=0.01, le=1)] =
+    pd.Field(0.95, alias="lowDissipationDensityCutoff")
     limit_velocity: Optional[bool] = pd.Field(False, alias="limitVelocity")
     limit_pressure_density: Optional[bool] = pd.Field(False, alias="limitPressureDensity")
 
@@ -571,6 +577,7 @@ class NavierStokesSolverLegacy(NavierStokesSolver, LegacyModel):
             "limitVelocity": self.limit_velocity,
             "limitPressureDensity": self.limit_pressure_density,
             "numericalDissipationFactor": self.numerical_dissipation_factor,
+            "lowDissipationDensityCutoff" : self.low_dissipation_density_cutoff,
         }
 
         if self.linear_iterations is not None and model["linearSolverConfig"] is not None:
