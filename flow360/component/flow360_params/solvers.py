@@ -186,8 +186,7 @@ class NavierStokesSolver(GenericFlowSolverSettings):
         1, alias="numericalDissipationFactor"
     )
 
-    low_dissipation_density_cutoff : Optional[pd.confloat(ge=0.01, le=1)] =
-    pd.Field(0.95, alias="lowDissipationDensityCutoff")
+    low_dissipation_density_cutoff : Optional[pd.confloat(ge=0.01, le=1)] = pd.Field(0.95, alias="lowDissipationDensityCutoff")
     limit_velocity: Optional[bool] = pd.Field(False, alias="limitVelocity")
     limit_pressure_density: Optional[bool] = pd.Field(False, alias="limitPressureDensity")
 
