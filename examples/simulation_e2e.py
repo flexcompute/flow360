@@ -5,6 +5,16 @@ from flow360.component.simulation.meshing_param.face_params import (
     BoundaryLayer,
     SurfaceRefinement,
 )
+from flow360.component.simulation.models.volume_models import BETDisk, Fluid
+from tests.simulation.translator.utils.xv15_bet_disk_helper import (
+    createBETDiskSteady,
+    createBETDiskUnsteady,
+    createSteadyTimeStepping,
+    createUDDInstance,
+    createUnsteadyTimeStepping,
+)
+from flow360.component.simulation.primitives import Cylinder
+from flow360.component.simulation.operating_condition import ThermalState
 from flow360.component.simulation.models.surface_models import Freestream, Wall
 from flow360.component.simulation.models.volume_models import Fluid
 from flow360.component.simulation.operating_condition import AerospaceCondition
@@ -21,95 +31,64 @@ from flow360.component.simulation.simulation_params import (
 from flow360.component.simulation.time_stepping.time_stepping import Steady
 from flow360.component.simulation.unit_system import SI_unit_system, u
 
-fl.UserConfig.set_profile("auto_test_1")
+#fl.UserConfig.set_profile("auto_test_1")
 fl.Env.dev.active()
 
 from flow360.component.geometry import Geometry
 from flow360.examples import Airplane
 
-SOLVER_VERSION = "workbench-24.6.0"
+SOLVER_VERSION = "workbench-24.6.10"
+rpm_hover = 588
 
+def dt_to_revolve_one_degree(rpm):
+    return (1.0 / (rpm / 60 * 360)) * u.s
 
-with SI_unit_system:
-    meshing = MeshingParams(
-        surface_layer_growth_rate=1.5,
-        refinements=[
-            BoundaryLayer(first_layer_thickness=0.001),
-            SurfaceRefinement(
-                entities=[Surface(name="wing")],
-                max_edge_length=15 * u.cm,
-                curvature_resolution_angle=10 * u.deg,
-            ),
-        ],
-    )
-    param = SimulationParams(
-        meshing=meshing,
-        reference_geometry=ReferenceGeometry(
-            moment_center=(1, 2, 3), moment_length=1.0 * u.m, area=1.0 * u.cm**2
-        ),
-        operating_condition=AerospaceCondition(velocity_magnitude=100),
-        models=[
-            Fluid(),
-            Wall(
-                entities=[
-                    Surface(name="fluid/rightWing"),
-                    Surface(name="fluid/leftWing"),
-                    Surface(name="fluid/fuselage"),
-                ],
-            ),
-            Freestream(entities=[Surface(name="fluid/farfield")]),
-        ],
-        time_stepping=Steady(max_steps=700),
+if __name__ == "__main__":
+    print("12")
+    _BET_cylinder = Cylinder(
+        name="my_bet_disk_volume",
+        center=(0, 0, 0) * u.inch,
+        axis=[0, 0, 1],
+        outer_radius=150 * u.inch,
+        height=15 * u.inch,
     )
 
-params_as_dict = param.model_dump()
-surface_json, hash = simulation_to_surface_meshing_json(
-    params_as_dict, "SI", {"value": 100.0, "units": "cm"}
-)
-print(surface_json)
-volume_json, hash = simulation_to_volume_meshing_json(
-    params_as_dict, "SI", {"value": 100.0, "units": "cm"}
-)
-print(volume_json)
-case_json, hash = simulation_to_case_json(params_as_dict, "SI", {"value": 100.0, "units": "cm"})
-print(case_json)
+    print("11")
+    with SI_unit_system:
+        param = SimulationParams(
+            reference_geometry=ReferenceGeometry(
+                moment_center=(0,0,0),
+                moment_length=1.0 * u.inch,
+                area=70685.83470577035 * u.inch * u.inch
+            ),
+            operating_condition=AerospaceCondition.from_mach(mach=0, reference_mach=0.69, thermal_state=ThermalState()),
+            models=[
+                Fluid(
+                ),
+                Wall(
+                    entities=[
+                        Surface(name="2"),
+                    ],
+                ),
+                Freestream(entities=[Surface(name="1")]),
+                BETDisk(
+                    createBETDiskUnsteady(_BET_cylinder, 10, rpm_hover)
+                )
+            ],
+            time_stepping=Unsteady(max_pseudo_steps=25, 
+                       steps=1800, 
+                       step_size=2*dt_to_revolve_one_degree(rpm_hover), 
+                       CFL=fl.RampCFL(initial=100, final=10000, ramp_steps=15)),
+        )
 
+    print("10")
+    params_as_dict = param.model_dump()
+    case_json, hash = simulation_to_case_json(params_as_dict, "SI", {"value": 1.0, "units": "inch"})
+    print(case_json)
 
-prefix = "testing-workbench-integration-airplane-csm"
+    prefix = "testing-workbench-integration-airplane-csm"
 
-# geometry
-geometry_draft = Geometry.from_file(
-    Airplane.geometry, name=f"{prefix}-geometry", solver_version=SOLVER_VERSION
-)
-geometry = geometry_draft.submit()
-print(geometry)
-
-# surface mesh
-params = fl.SurfaceMeshingParams(**surface_json)
-
-surface_mesh_draft = fl.SurfaceMesh.create(
-    geometry_id=geometry.id,
-    params=params,
-    name=f"{prefix}-surface-mesh",
-    solver_version=SOLVER_VERSION,
-)
-surface_mesh = surface_mesh_draft.submit()
-
-print(surface_mesh)
-
-# volume mesh
-params = fl.VolumeMeshingParams(**volume_json)
-
-volume_mesh_draft = fl.VolumeMesh.create(
-    surface_mesh_id=surface_mesh.id,
-    name=f"{prefix}-volume-mesh",
-    params=params,
-    solver_version=SOLVER_VERSION,
-)
-volume_mesh = volume_mesh_draft.submit()
-print(volume_mesh)
-
-# case
-params = fl.Flow360Params(**case_json, legacy_fallback=True)
-case_draft = volume_mesh.create_case(f"{prefix}-case", params, solver_version=SOLVER_VERSION)
-case = case_draft.submit()
+    # case
+    params = fl.Flow360Params(**case_json, legacy_fallback=True)
+    case_draft = volume_mesh.create_case(f"{prefix}-case", params, solver_version=SOLVER_VERSION)
+    case = case_draft.submit()
