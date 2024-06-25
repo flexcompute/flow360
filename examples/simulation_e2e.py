@@ -28,8 +28,8 @@ from flow360.component.simulation.simulation_params import (
     MeshingParams,
     SimulationParams,
 )
-from flow360.component.simulation.time_stepping.time_stepping import Steady
-from flow360.component.simulation.unit_system import SI_unit_system, u
+from flow360.component.simulation.time_stepping.time_stepping import Steady, Unsteady, RampCFL
+from flow360.component.simulation.unit_system import SI_unit_system, u, imperial_unit_system
 
 #fl.UserConfig.set_profile("auto_test_1")
 fl.Env.dev.active()
@@ -44,7 +44,7 @@ def dt_to_revolve_one_degree(rpm):
     return (1.0 / (rpm / 60 * 360)) * u.s
 
 if __name__ == "__main__":
-    print("12")
+    print("1")
     _BET_cylinder = Cylinder(
         name="my_bet_disk_volume",
         center=(0, 0, 0) * u.inch,
@@ -52,9 +52,9 @@ if __name__ == "__main__":
         outer_radius=150 * u.inch,
         height=15 * u.inch,
     )
-
-    print("11")
-    with SI_unit_system:
+    betdisk_unsteady = createBETDiskUnsteady(_BET_cylinder, 10, rpm_hover)
+    print("2")
+    with imperial_unit_system:
         param = SimulationParams(
             reference_geometry=ReferenceGeometry(
                 moment_center=(0,0,0),
@@ -71,23 +71,29 @@ if __name__ == "__main__":
                     ],
                 ),
                 Freestream(entities=[Surface(name="1")]),
-                BETDisk(
-                    createBETDiskUnsteady(_BET_cylinder, 10, rpm_hover)
-                )
+                betdisk_unsteady,
             ],
             time_stepping=Unsteady(max_pseudo_steps=25, 
                        steps=1800, 
                        step_size=2*dt_to_revolve_one_degree(rpm_hover), 
-                       CFL=fl.RampCFL(initial=100, final=10000, ramp_steps=15)),
+                       CFL=RampCFL(initial=100, final=10000, ramp_steps=15)
+            ),
         )
 
-    print("10")
+    print("3")
     params_as_dict = param.model_dump()
-    case_json, hash = simulation_to_case_json(params_as_dict, "SI", {"value": 1.0, "units": "inch"})
+    case_json, hash = simulation_to_case_json(params_as_dict, "Imperial", {"value": 1.0, "units": "inch"})
     print(case_json)
 
-    prefix = "testing-workbench-integration-airplane-csm"
+    prefix = "testing-workbench-integration-xv15_unsteady"
 
+    #
+    volume_mesh = fl.VolumeMesh.from_file(
+        "single_disk_with_sphere_zAxis_R150_290K.lb8.ugrid",
+        name="xv15-BET-290k",
+        solver_version=SOLVER_VERSION,
+    )
+    volume_mesh = volume_mesh.submit()
     # case
     params = fl.Flow360Params(**case_json, legacy_fallback=True)
     case_draft = volume_mesh.create_case(f"{prefix}-case", params, solver_version=SOLVER_VERSION)
