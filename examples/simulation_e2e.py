@@ -19,6 +19,8 @@ from flow360.component.simulation.models.surface_models import Freestream, Wall
 from flow360.component.simulation.models.volume_models import Fluid
 from flow360.component.simulation.operating_condition import AerospaceCondition
 from flow360.component.simulation.primitives import ReferenceGeometry, Surface
+from flow360.component.simulation.outputs.outputs import ProbeOutput
+from flow360.component.simulation.outputs.output_entities import Probe
 from flow360.component.simulation.user_defined_dynamics.user_defined_dynamics import UserDefinedDynamic
 from flow360.component.simulation.services import (
     simulation_to_case_json,
@@ -79,6 +81,20 @@ if __name__ == "__main__":
     udd_instance = createUDDInstance()
 
     with imperial_unit_system:
+        probe = ProbeOutput(
+            entities = [
+                Probe(
+                    name = "probe_set_1",
+                    locations = [[0,0,-100],[0,0,-150]]
+                ),
+                Probe(
+                    name = "probe_set_2",
+                    locations = [[10,0,-100], [20,0,-150]]
+                ),
+            ],
+            output_fields = ["Mach","Cp","primitiveVars"],
+            output_type="ProbeOutput",
+        )
         param = SimulationParams(
             reference_geometry=ReferenceGeometry(
                 moment_center=(0,0,0),
@@ -98,11 +114,12 @@ if __name__ == "__main__":
                 betdisk_unsteady,
             ],
             time_stepping=Unsteady(max_pseudo_steps=25, 
-                       steps=1800, 
+                       steps=50, 
                        step_size=2*dt_to_revolve_one_degree(rpm_hover), 
                        CFL=RampCFL(initial=100, final=10000, ramp_steps=15)
             ),
             user_defined_dynamics = [udd_instance],
+            outputs = [probe],
         )
 
     print("3")
