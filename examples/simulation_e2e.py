@@ -19,6 +19,7 @@ from flow360.component.simulation.models.surface_models import Freestream, Wall
 from flow360.component.simulation.models.volume_models import Fluid
 from flow360.component.simulation.operating_condition import AerospaceCondition
 from flow360.component.simulation.primitives import ReferenceGeometry, Surface
+from flow360.component.simulation.user_defined_dynamics.user_defined_dynamics import UserDefinedDynamic
 from flow360.component.simulation.services import (
     simulation_to_case_json,
     simulation_to_surface_meshing_json,
@@ -43,6 +44,28 @@ rpm_hover = 588
 def dt_to_revolve_one_degree(rpm):
     return (1.0 / (rpm / 60 * 360)) * u.s
 
+def createUDDInstance():
+    udd = UserDefinedDynamic(
+        name="BET_Controller",
+        input_vars=["bet_0_thrust"],
+        output_vars={"bet_0_omega": "state[0];"},
+        constants={
+            "ThrustTarget": 300,
+            "PConst": 1e-7,
+            "IConst": 1e-7,
+            "omega0": 0.003,
+        },
+        state_vars_initial_value=["0.003", "0.0", "0", "0", "0"],
+        update_law=[
+            "if (physicalStep > 150 and pseudoStep == 0) PConst * (ThrustTarget - bet_0_thrust)  + IConst * state[1] + omega0; else state[0];",
+            "if (physicalStep > 150 and pseudoStep == 0) state[1] + (ThrustTarget - bet_0_thrust); else state[1];",
+            "(physicalStep > 150 and pseudoStep == 0)",
+            "ThrustTarget - bet_0_thrust",
+            "IConst * state[1]",
+        ],
+    )
+    return udd
+
 if __name__ == "__main__":
     print("1")
     _BET_cylinder = Cylinder(
@@ -53,7 +76,8 @@ if __name__ == "__main__":
         height=15 * u.inch,
     )
     betdisk_unsteady = createBETDiskUnsteady(_BET_cylinder, 10, rpm_hover)
-    print("2")
+    udd_instance = createUDDInstance()
+
     with imperial_unit_system:
         param = SimulationParams(
             reference_geometry=ReferenceGeometry(
@@ -78,10 +102,15 @@ if __name__ == "__main__":
                        step_size=2*dt_to_revolve_one_degree(rpm_hover), 
                        CFL=RampCFL(initial=100, final=10000, ramp_steps=15)
             ),
+            user_defined_dynamics = [udd_instance],
         )
 
     print("3")
+    import json
     params_as_dict = param.model_dump()
+    with open('simulation_generated.json', 'w') as fh:
+        json.dump(params_as_dict, fh, indent=4)
+
     case_json, hash = simulation_to_case_json(params_as_dict, "Imperial", {"value": 1.0, "units": "inch"})
     print(case_json)
 
