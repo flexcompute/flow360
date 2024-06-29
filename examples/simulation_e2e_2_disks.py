@@ -48,9 +48,9 @@ rpm_hover = 588
 def dt_to_revolve_one_degree(rpm):
     return (1.0 / (rpm / 60 * 360)) * u.s
 
-def createUDDInstance():
+def createUDDInstance_1():
     udd = UserDefinedDynamic(
-        name="BET_Controller",
+        name="BET_Controller_1",
         input_vars=["bet_0_thrust"],
         output_vars={"bet_0_omega": "state[0];"},
         constants={
@@ -70,17 +70,48 @@ def createUDDInstance():
     )
     return udd
 
+def createUDDInstance_2():
+    udd = UserDefinedDynamic(
+        name="BET_Controller_2",
+        input_vars=["bet_1_thrust"],
+        output_vars={"bet_1_omega": "state[0];"},
+        constants={
+            "ThrustTarget": 300,
+            "PConst": 1e-7,
+            "IConst": 1e-7,
+            "omega1": 0.003,
+        },
+        state_vars_initial_value=["0.003", "0.0", "0", "0", "0"],
+        update_law=[
+            "if (physicalStep > 150 and pseudoStep == 0) PConst * (ThrustTarget - bet_1_thrust)  + IConst * state[1] + omega1; else state[0];",
+            "if (physicalStep > 150 and pseudoStep == 0) state[1] + (ThrustTarget - bet_1_thrust); else state[1];",
+            "(physicalStep > 150 and pseudoStep == 0)",
+            "ThrustTarget - bet_1_thrust",
+            "IConst * state[1]",
+        ],
+    )
+    return udd
+
 if __name__ == "__main__":
     print("1")
-    _BET_cylinder = Cylinder(
-        name="my_bet_disk_volume",
+    _BET_cylinder_1 = Cylinder(
+        name="my_bet_disk_volume_1",
         center=(0, 0, 0) * u.inch,
         axis=[0, 0, 1],
         outer_radius=150 * u.inch,
         height=15 * u.inch,
     )
-    betdisk_unsteady = createBETDiskUnsteady(_BET_cylinder, 10, rpm_hover)
-    udd_instance = createUDDInstance()
+    _BET_cylinder_2 = Cylinder(
+        name="my_bet_disk_volume_2",
+        center=(400, 0, 0) * u.inch,
+        axis=[0, 0, 1],
+        outer_radius=150 * u.inch,
+        height=15 * u.inch,
+    )
+    betdisk_unsteady_1 = createBETDiskUnsteady(_BET_cylinder_1, 10, rpm_hover)
+    betdisk_unsteady_2 = createBETDiskUnsteady(_BET_cylinder_2, 10, rpm_hover)
+    udd_instance_1 = createUDDInstance_1()
+    udd_instance_2 = createUDDInstance_2()
 
     with imperial_unit_system:
         probe = ProbeOutput(
@@ -109,18 +140,20 @@ if __name__ == "__main__":
                 ),
                 Wall(
                     entities=[
-                        Surface(name="2"),
+                        Surface(name="blk-1/sphere1"),
+                        Surface(name="blk-1/sphere2"),
                     ],
                 ),
-                Freestream(entities=[Surface(name="1")]),
-                betdisk_unsteady,
+                Freestream(entities=[Surface(name="blk-1/farfield")]),
+                betdisk_unsteady_1,
+                betdisk_unsteady_2,
             ],
             time_stepping=Unsteady(max_pseudo_steps=25, 
                        steps=50, 
                        step_size=2*dt_to_revolve_one_degree(rpm_hover), 
                        CFL=RampCFL(initial=100, final=10000, ramp_steps=15)
             ),
-            user_defined_dynamics = [udd_instance],
+            user_defined_dynamics = [udd_instance_1, udd_instance_2],
             outputs = [probe],
         )
 
@@ -137,8 +170,8 @@ if __name__ == "__main__":
 
     #
     volume_mesh = fl.VolumeMesh.from_file(
-        "single_disk_with_sphere_zAxis_R150_290K.lb8.ugrid",
-        name="xv15-BET-290k",
+        "xv15_2_BET_2_sphere_303k_zAxis.cgns",
+        name="xv15-2-BET-2-spheres-303k",
         solver_version=SOLVER_VERSION,
     )
     volume_mesh = volume_mesh.submit()
