@@ -122,10 +122,10 @@ def get_solver_json(
                     # pylint: disable=fixme
                     # TODO: implement
             for surface in model.entities.stored_entities:
-                if surface.name.startswith("fluid"):
-                    translated["boundaries"][surface.name] = spec
+                if surface.name.startswith("fluid/"):
+                    translated["boundaries"][surface.name[len("fluid/"):]] = spec
                 else:
-                    translated["boundaries"][f"fluid/{surface.name}"] = spec
+                    translated["boundaries"][surface.name] = spec
 
     ##:: Step 4: Get outputs
     outputs = input_params.outputs
