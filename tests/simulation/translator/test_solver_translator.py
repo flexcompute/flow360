@@ -42,6 +42,11 @@ from tests.simulation.translator.utils.xv15BETDiskNestedRotation_param_generator
     cylinder_inner,
     cylinder_middle,
 )
+
+from tests.simulation.translator.utils.vortex_propagation_generator import (
+    create_vortex_propagation_param
+)
+
 from tests.utils import compare_values
 
 
@@ -182,3 +187,9 @@ def test_porous_media(
     translate_and_compare(
         param, mesh_unit=1 * u.m, ref_json_file="Flow360_porous_media_volume_zone.json"
     )
+
+
+def test_vortex_propagation(create_vortex_propagation_param):
+    param = create_vortex_propagation_param
+    translate_and_compare(param, mesh_unit=1 * u.m, ref_json_file="Flow360_vortex_propagation.json")
+    
