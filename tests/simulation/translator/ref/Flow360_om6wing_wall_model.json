@@ -1,18 +1,13 @@
 {
     "boundaries": {
         "1": {
-            "name": "wing",
-            "type": "WallFunction",
-            "velocityType": "relative"
+            "type": "WallFunction"
         },
         "2": {
-            "name": "symmetry",
             "type": "SlipWall"
         },
         "3": {
-            "name": "freestream",
-            "type": "Freestream",
-            "velocityType": "relative"
+            "type": "Freestream"
         }
     },
     "freestream": {
