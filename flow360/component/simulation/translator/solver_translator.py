@@ -488,7 +488,7 @@ def boundary_spec_translator(model: SurfaceModelTypes, op_acousitc_to_static_pre
         elif isinstance(model.spec, MassFlowRate):
             pass
     elif isinstance(model, Periodic):
-        pass
+        boundary["type"] = "Periodic"
     elif isinstance(model, SlipWall):
         boundary["type"] = "SlipWall"
     elif isinstance(model, Freestream):
@@ -585,7 +585,7 @@ def get_solver_json(
         }
     dump_dict(input_params.time_stepping)
 
-    ##:: Step 6: Get solver settings
+    ##:: Step 6: Get solver settings and initial condition
     for model in input_params.models:
         if isinstance(model, Fluid):
             translated["navierStokesSolver"] = dump_dict(model.navier_stokes_solver)
@@ -600,6 +600,8 @@ def get_solver_json(
                 translated["turbulenceModelSolver"]["modelConstants"] = translated[
                     "turbulenceModelSolver"
                 ].pop("modelingConstants")
+            if model.initial_condition:
+                translated["initialCondition"] = dump_dict(model.initial_condition)
 
     ##:: Step 7: Get BET and AD lists
     for model in input_params.models:
