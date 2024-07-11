@@ -44,7 +44,8 @@ from tests.simulation.translator.utils.xv15BETDiskNestedRotation_param_generator
 )
 
 from tests.simulation.translator.utils.vortex_propagation_generator import (
-    create_vortex_propagation_param
+    create_vortex_propagation_param,
+    create_periodic_euler_vortex_param
 )
 
 from tests.utils import compare_values
@@ -192,4 +193,8 @@ def test_porous_media(
 def test_vortex_propagation(create_vortex_propagation_param):
     param = create_vortex_propagation_param
     translate_and_compare(param, mesh_unit=1 * u.m, ref_json_file="Flow360_vortex_propagation.json")
-    
+
+def test_periodic_euler_vortex(create_periodic_euler_vortex_param):
+    param = create_periodic_euler_vortex_param
+    translate_and_compare(param, mesh_unit=1 * u.m, ref_json_file="Flow360_periodic_euler_vortex.json")
+
