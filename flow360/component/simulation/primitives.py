@@ -315,8 +315,8 @@ class GhostSurface(_SurfaceEntityBase):
 
     """
 
-    private_attribute_entity_type_name: Literal["GhostSurface"] = pd.Field(
-        "GhostSurface", frozen=True
+    private_attribute_entity_type_name: Literal["UnvalidatedSurface"] = pd.Field(
+        "UnvalidatedSurface", frozen=True
     )
 
 
