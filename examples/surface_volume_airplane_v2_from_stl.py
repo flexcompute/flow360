@@ -27,6 +27,6 @@ volume_mesh = fl.VolumeMesh.create(
     surface_mesh_id=surface_mesh.id,
     name="airplane-volume-mesh-from-stl",
     params=params,
-    solver_version="release-24.7.0"
+    solver_version="betaFL-24.7.3"
 )
 volume_mesh = volume_mesh.submit(force_submit=True)
