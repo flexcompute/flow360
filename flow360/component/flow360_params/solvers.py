@@ -199,7 +199,7 @@ class NavierStokesSolver(GenericFlowSolverSettings):
     low_dissipation_control_factors: Optional[List[float]] = pd.Field(
         default=[], alias="lowDissipationControlFactors"
     )
-    max_pressure_density_change: Optional[List[float]] = pd.Field(
+    max_pressure_density_change: Optional[pd.PositiveFloat] = pd.Field(
         default=0.5, alias="maxPressureDensityChange"
     )
 
