@@ -199,6 +199,9 @@ class NavierStokesSolver(GenericFlowSolverSettings):
     low_dissipation_control_factors: Optional[List[float]] = pd.Field(
         default=[], alias="lowDissipationControlFactors"
     )
+    max_pressure_density_change: Optional[List[float]] = pd.Field(
+        default=0.5, alias="maxPressureDensityChange"
+    )
 
     # pylint: disable=arguments-differ,invalid-name
     def to_solver(self, params, **kwargs) -> NavierStokesSolver:
