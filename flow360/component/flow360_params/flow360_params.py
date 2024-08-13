@@ -114,7 +114,7 @@ from .validations import (
     _check_incompressible_navier_stokes_solver,
     _check_low_mach_preconditioner_output,
     _check_numerical_dissipation_factor_output,
-    _check_output_fields,
+    _check_output_and_iso_fields,
     _check_periodic_boundary_mapping,
     _check_tri_quad_boundaries,
     _ignore_velocity_type_in_boundaries,
@@ -977,9 +977,9 @@ class PorousMediumBox(PorousMediumBase):
     zone_type: Literal["box"] = pd.Field("box", alias="zoneType", const=True)
     center: LengthType.Point = pd.Field()
     lengths: LengthType.Moment = pd.Field()
-    windowing_lengths: Optional[Tuple[pd.PositiveFloat, pd.PositiveFloat, pd.PositiveFloat]] = (
-        pd.Field(alias="windowingLengths")
-    )
+    windowing_lengths: Optional[
+        Tuple[pd.PositiveFloat, pd.PositiveFloat, pd.PositiveFloat]
+    ] = pd.Field(alias="windowingLengths")
 
 
 class PorousMediumVolumeZoneLegacy(Flow360BaseModel):
@@ -1266,7 +1266,7 @@ class Flow360Params(Flow360BaseModel):
         """
         check that output fields are valid.
         """
-        return _check_output_fields(values)
+        return _check_output_and_iso_fields(values)
 
     # pylint: disable=no-self-argument
     @pd.root_validator

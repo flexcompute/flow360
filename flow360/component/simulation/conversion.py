@@ -222,7 +222,9 @@ def unit_converter(dimension, mesh_unit: u.unyt_quantity, params, required_by: L
         base_temperature = get_base_temperature()
         base_length = get_base_length()
 
-        base_thermal_conductivity = base_density * base_velocity**3 * base_length / base_temperature
+        base_thermal_conductivity = (
+            base_density * base_velocity**3 * base_length / base_temperature
+        )
 
         return base_thermal_conductivity
 
@@ -314,7 +316,6 @@ def unit_converter(dimension, mesh_unit: u.unyt_quantity, params, required_by: L
         flow360_conversion_unit_system.base_frequency = base_time ** (-1)
 
     elif dimension == u.dimensions.angle:
-
         # pylint: disable=no-member
         flow360_conversion_unit_system.base_angle = 1
 

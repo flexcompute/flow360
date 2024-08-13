@@ -629,7 +629,7 @@ class MonitorOutputLegacy(LegacyModel):
 class IsoSurface(Flow360BaseModel):
     """:class:`IsoSurface` class"""
 
-    surface_field: Literal[IsoSurfaceFields] = pd.Field(alias="surfaceField")
+    surface_field: Union[IsoSurfaceFields, str] = pd.Field(alias="surfaceField")
     surface_field_magnitude: float = pd.Field(alias="surfaceFieldMagnitude")
     output_fields: Optional[List[Union[CommonFields, str]]] = pd.Field(
         alias="outputFields", default=[]

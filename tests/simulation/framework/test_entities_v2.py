@@ -216,7 +216,6 @@ class TempUserDefinedDynamic(Flow360BaseModel):
 
 
 class TempSimulationParam(_ParamModelBase):
-
     far_field_type: Literal["auto", "user-defined"] = pd.Field()
 
     models: List[Union[TempFluidDynamics, TempWallBC, TempRotation]] = pd.Field()

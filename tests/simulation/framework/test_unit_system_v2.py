@@ -61,9 +61,9 @@ class DataWithUnitsConstrained(pd.BaseModel):
     v: VelocityType.NonNegative = pd.Field()
     A: AreaType.Positive = pd.Field()
     F: ForceType.NonPositive = pd.Field()
-    p: Union[PressureType.Constrained(ge=5, lt=9), PressureType.Constrained(ge=10, lt=12)] = (
-        pd.Field()
-    )
+    p: Union[
+        PressureType.Constrained(ge=5, lt=9), PressureType.Constrained(ge=10, lt=12)
+    ] = pd.Field()
     r: DensityType = pd.Field()
     mu: ViscosityType.Constrained(ge=2) = pd.Field()
     m_dot: MassFlowRateType.Constrained(ge=3) = pd.Field()
@@ -511,7 +511,6 @@ def test_unit_system():
 
 
 def test_optionals_and_unions():
-
     data = DataWithOptionalUnion(
         L=1 * u.m,
         m=2 * u.kg,
@@ -537,7 +536,6 @@ def test_optionals_and_unions():
 
 
 def test_scalar_or_vector():
-
     expected_s = {"value": 1, "units": "m"}
     expected_v = {"value": (1, 1, 1), "units": "m"}
 

@@ -160,7 +160,6 @@ def write_example(
     additional_fields: dict = {},
     exclude=None,
 ):
-
     if isinstance(obj, dict):
         data = obj
     elif isinstance(obj, Flow360BaseModel):

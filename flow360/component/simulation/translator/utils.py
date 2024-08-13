@@ -260,7 +260,6 @@ def translate_setting_and_apply_to_all_entities(
     # pylint: disable=too-many-nested-blocks
     for obj in obj_list:
         if class_type and is_exact_instance(obj, class_type):
-
             list_of_entities = []
             if "entities" in obj.model_fields:
                 if obj.entities is None:
@@ -368,7 +367,6 @@ def get_global_setting_from_per_item_setting(
     )
 
     if global_setting is None:
-
         if return_none_when_no_global_found is True:
             return None
 

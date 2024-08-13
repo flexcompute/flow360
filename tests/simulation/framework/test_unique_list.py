@@ -43,9 +43,9 @@ class TempSlice(_OutputItemBase):
 
 class TempIsosurfaceOutput(Flow360BaseModel):
     isosurfaces: UniqueItemList[TempIsosurface] = pd.Field()
-    output_fields: UniqueAliasedStringList[Literal[CommonFieldNames, CommonFieldNamesFull]] = (
-        pd.Field()
-    )
+    output_fields: UniqueAliasedStringList[
+        Literal[CommonFieldNames, CommonFieldNamesFull]
+    ] = pd.Field()
 
 
 class TempPeriodic(Flow360BaseModel):

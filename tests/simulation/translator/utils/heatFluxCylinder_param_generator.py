@@ -58,7 +58,6 @@ def append_heat_flux_cylinder_boundaries(params):
 
 
 def create_heat_flux_cylinder_base_param():
-
     with SI_unit_system:
         default_thermal_state = ThermalState()
         mesh_unit = 1 * u.m

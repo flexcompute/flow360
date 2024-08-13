@@ -12,7 +12,6 @@ def change_test_dir(request, monkeypatch):
 
 
 def test_validate_service():
-
     params_data = {
         "meshing": {
             "refinement_factor": 1.0,
@@ -135,7 +134,6 @@ def test_validate_multiple_errors():
 
 
 def test_validate_errors():
-
     params_data = {
         "meshing": {
             "farfield": "auto",
@@ -198,7 +196,6 @@ def test_init():
 
 
 def test_validate_init_data_errors():
-
     data = services.get_default_params(
         unit_system_name="SI", length_unit="m", root_item_type="Geometry"
     )

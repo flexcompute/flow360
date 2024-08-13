@@ -35,7 +35,6 @@ SOLVER_VERSION = "workbench-24.6.0"
 
 
 def get_all_process_jsons(params_as_dict):
-
     surface_json, hash = simulation_to_surface_meshing_json(
         params_as_dict, "SI", {"value": 1.0, "units": "m"}
     )

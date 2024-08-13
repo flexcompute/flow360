@@ -25,7 +25,6 @@ from .volume_zones import HeatTransferVolumeZone
 def _ignore_velocity_type_in_boundaries(values):
     """values here is actually json dict."""
     for obj in values.values():
-
         if "velocityType" in obj:
             bc_type = obj.get("type", "")
             log.warning(
@@ -506,8 +505,9 @@ def _check_low_mach_preconditioner_output(values):
     return values
 
 
-def _check_per_item_output_fields(output_item_obj, additional_fields: List, error_prefix=""):
-
+def _check_per_output_item_fields(
+    output_item_obj, additional_fields: List, check_iso_field=False, error_prefix=""
+):
     def extract_literal_values(annotation):
         origin = get_origin(annotation)
         if origin is Union:
@@ -537,9 +537,14 @@ def _check_per_item_output_fields(output_item_obj, additional_fields: List, erro
                     f"{error_prefix}:, {output_field} is not valid output field name. "
                     f"Allowed inputs are {allowed_items}."
                 )
+    if check_iso_field is True and output_item_obj.surface_field not in allowed_items:
+        raise ValueError(
+            f"{error_prefix}:, {output_field} is not valid iso field name. "
+            f"Allowed inputs are {allowed_items}."
+        )
 
 
-def _check_output_fields(values: dict):
+def _check_output_and_iso_fields(values: dict):
     if values.get("user_defined_fields") is not None:
         additional_fields = [item.name for item in values.get("user_defined_fields")]
     else:
@@ -547,7 +552,7 @@ def _check_output_fields(values: dict):
 
     # Volume Output:
     if values.get("volume_output") is not None:
-        _check_per_item_output_fields(
+        _check_per_output_item_fields(
             values.get("volume_output"), additional_fields, "volume_output"
         )
 
@@ -569,11 +574,16 @@ def _check_output_fields(values: dict):
                 # This function modifies the first arg
                 _distribute_shared_output_fields(output_obj_hardcopy.__dict__, collection_name)
                 for item_name in collection_obj.names():
-                    _check_per_item_output_fields(
-                        collection_obj[item_name], additional_fields, output_name + "->" + item_name
+                    _check_per_output_item_fields(
+                        collection_obj[item_name],
+                        additional_fields,
+                        check_iso_field=output_name == "iso_surface_output",
+                        error_prefix=output_name + "->" + item_name,
                     )
+
             elif (
                 getattr(output_obj, "output_fields", None) is not None
             ):  # Did not specify the collection and we add it later:
-                _check_per_item_output_fields(output_obj, additional_fields, output_name)
+                _check_per_output_item_fields(output_obj, additional_fields, output_name)
+
     return values

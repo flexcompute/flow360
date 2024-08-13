@@ -194,7 +194,6 @@ def test_automated_farfield_surface_usage():
 
 
 def test_automated_farfield_import_export():
-
     my_farfield = AutomatedFarfield(name="my_farfield")
     model_as_dict = my_farfield.model_dump()
     assert "private_attribute_entity" not in model_as_dict.keys()
