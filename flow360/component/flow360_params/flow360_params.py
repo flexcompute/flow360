@@ -977,9 +977,9 @@ class PorousMediumBox(PorousMediumBase):
     zone_type: Literal["box"] = pd.Field("box", alias="zoneType", const=True)
     center: LengthType.Point = pd.Field()
     lengths: LengthType.Moment = pd.Field()
-    windowing_lengths: Optional[
-        Tuple[pd.PositiveFloat, pd.PositiveFloat, pd.PositiveFloat]
-    ] = pd.Field(alias="windowingLengths")
+    windowing_lengths: Optional[Tuple[pd.PositiveFloat, pd.PositiveFloat, pd.PositiveFloat]] = (
+        pd.Field(alias="windowingLengths")
+    )
 
 
 class PorousMediumVolumeZoneLegacy(Flow360BaseModel):

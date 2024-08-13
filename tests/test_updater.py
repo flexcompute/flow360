@@ -166,6 +166,7 @@ def test_updater_from_files():
     assert set(params.volume_output.output_fields) == {"hmmm", "primitiveVars", "Mach"}
     assert set(params.slice_output.slices["mid_Height"].output_fields) == {"uhh", "Cp"}
     assert set(params.iso_surface_output.iso_surfaces["newKey"].output_fields) == {"Mach", "hmmm"}
+    assert params.iso_surface_output.iso_surfaces["newKey"].surface_field == "uhh"
     assert set(params.monitor_output.monitors["newKey"].output_fields) == {"hmmm"}
     assert set(params.monitor_output.monitors["Group1"].output_fields) == {"primitiveVars", "uhh"}
 

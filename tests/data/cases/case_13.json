@@ -61,7 +61,7 @@
         "outputFormat": "tecplot",
         "isoSurfaces": {
             "newKey": {
-                "surfaceField": "Mach",
+                "surfaceField": "uhh",
                 "surfaceFieldMagnitude": 0.25,
                 "outputFields": [
                     "Mach",

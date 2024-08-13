@@ -644,6 +644,7 @@ class IsoSurface(Flow360BaseModel):
         def schema_extra(schema, model):
             """Remove output field shorthands from schema"""
             schema["properties"]["outputFields"]["items"]["enum"] = []
+            schema["properties"]["surfaceField"]["enum"] = []
 
             _filter_fields(
                 schema["properties"]["outputFields"]["items"]["enum"], CommonFieldNamesFull

@@ -537,11 +537,17 @@ def _check_per_output_item_fields(
                     f"{error_prefix}:, {output_field} is not valid output field name. "
                     f"Allowed inputs are {allowed_items}."
                 )
-    if check_iso_field is True and output_item_obj.surface_field not in allowed_items:
-        raise ValueError(
-            f"{error_prefix}:, {output_field} is not valid iso field name. "
-            f"Allowed inputs are {allowed_items}."
+
+    if check_iso_field is True:
+        natively_supported = extract_literal_values(
+            output_item_obj.__fields__["surface_field"].annotation
         )
+        allowed_items = natively_supported + additional_fields
+        if output_item_obj.surface_field not in allowed_items:
+            raise ValueError(
+                f"{error_prefix}:, {output_item_obj.surface_field} is not valid iso field name. "
+                f"Allowed inputs are {allowed_items}."
+            )
 
 
 def _check_output_and_iso_fields(values: dict):
@@ -553,7 +559,10 @@ def _check_output_and_iso_fields(values: dict):
     # Volume Output:
     if values.get("volume_output") is not None:
         _check_per_output_item_fields(
-            values.get("volume_output"), additional_fields, "volume_output"
+            values.get("volume_output"),
+            additional_fields=additional_fields,
+            check_iso_field=False,
+            error_prefix="volume_output",
         )
 
     for output_name, collection_name in zip(
@@ -576,7 +585,7 @@ def _check_output_and_iso_fields(values: dict):
                 for item_name in collection_obj.names():
                     _check_per_output_item_fields(
                         collection_obj[item_name],
-                        additional_fields,
+                        additional_fields=additional_fields,
                         check_iso_field=output_name == "iso_surface_output",
                         error_prefix=output_name + "->" + item_name,
                     )
@@ -584,6 +593,11 @@ def _check_output_and_iso_fields(values: dict):
             elif (
                 getattr(output_obj, "output_fields", None) is not None
             ):  # Did not specify the collection and we add it later:
-                _check_per_output_item_fields(output_obj, additional_fields, output_name)
+                _check_per_output_item_fields(
+                    output_obj,
+                    additional_fields=additional_fields,
+                    check_iso_field=False,
+                    error_prefix=output_name,
+                )
 
     return values
