@@ -21,7 +21,7 @@ fl.Env.preprod.active()
 OM6wing.get_files()
 # Creating and uploading a volume mesh from file
 project = Project.from_file(
-    OM6wing.mesh_filename, name="wing-volume-mesh-python-upload", tags=["python"], solver_version="betaFLV12-24.11.1"
+    OM6wing.mesh_filename, name="wing-volume-mesh-python-upload", tags=["python"], solver_version="beta-h200-24.11.0"
 )
 
 volume_mesh = project.volume_mesh
