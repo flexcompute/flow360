@@ -112,13 +112,16 @@ def get_no_slip_walls(params: Union[Flow360Params, Flow360MeshParams]):
             wall_name
             for wall_name, wall in params.boundaries.dict().items()
             # pylint: disable=no-member
-            if wall_name != COMMENTS and _GenericBoundaryWrapper(v=wall).v.type == NoSlipWall().type
+            if wall_name != COMMENTS
+            and _GenericBoundaryWrapper(v=wall).v.type == NoSlipWall().type
         ]
 
     return []
 
 
-def get_boundaries_from_sliding_interfaces(params: Union[Flow360Params, Flow360MeshParams]):
+def get_boundaries_from_sliding_interfaces(
+    params: Union[Flow360Params, Flow360MeshParams],
+):
     """
     Get wall boundary names
     :param params:
@@ -168,9 +171,9 @@ def get_boundaries_from_file(cgns_file: str, solver_version: str = None):
                     if element_type_tag in [5, 7]:
                         names.append(f"{zone_name}/{section_name}")
                     if element_type_tag == 20:
-                        first_element_type_tag = zone[f"{section_name}/ElementConnectivity/ data"][
-                            0
-                        ]
+                        first_element_type_tag = zone[
+                            f"{section_name}/ElementConnectivity/ data"
+                        ][0]
                         if first_element_type_tag in [5, 7]:
                             names.append(f"{zone_name}/{section_name}")
                 else:
@@ -196,9 +199,9 @@ def validate_cgns(
     assert cgns_file
     assert params
     boundaries_in_file = get_boundaries_from_file(cgns_file, solver_version)
-    boundaries_in_params = get_no_slip_walls(params) + get_boundaries_from_sliding_interfaces(
+    boundaries_in_params = get_no_slip_walls(
         params
-    )
+    ) + get_boundaries_from_sliding_interfaces(params)
     boundaries_in_file = set(boundaries_in_file)
     boundaries_in_params = set(boundaries_in_params)
 
@@ -340,7 +343,9 @@ class VolumeMeshDraft(ResourceDraft):
 
     def _submit_from_surface(self, force_submit: bool = False):
         self.validator_api(
-            self.params, solver_version=self.solver_version, raise_on_error=(not force_submit)
+            self.params,
+            solver_version=self.solver_version,
+            raise_on_error=(not force_submit),
         )
         body = {
             "name": self.name,
@@ -388,9 +393,7 @@ class VolumeMeshDraft(ResourceDraft):
             remote_file_name = "volumeMesh"
         else:
             remote_file_name = "mesh"
-        remote_file_name = (
-            f"{remote_file_name}{endianness.ext()}{mesh_format.ext()}{compression.ext()}"
-        )
+        remote_file_name = f"{remote_file_name}{endianness.ext()}{mesh_format.ext()}{compression.ext()}"
 
         name = self.name
         if name is None:
@@ -433,7 +436,9 @@ class VolumeMeshDraft(ResourceDraft):
             and self.compress_method == CompressionFormat.BZ2
         ):
             upload_id = mesh.create_multipart_upload(remote_file_name)
-            compress_and_upload_chunks(self.file_name, upload_id, mesh, remote_file_name)
+            compress_and_upload_chunks(
+                self.file_name, upload_id, mesh, remote_file_name
+            )
 
         elif (
             original_compression == CompressionFormat.NONE
@@ -441,11 +446,15 @@ class VolumeMeshDraft(ResourceDraft):
         ):
             compressed_file_name = zstd_compress(self.file_name)
             mesh._upload_file(
-                remote_file_name, compressed_file_name, progress_callback=progress_callback
+                remote_file_name,
+                compressed_file_name,
+                progress_callback=progress_callback,
             )
             os.remove(compressed_file_name)
         else:
-            mesh._upload_file(remote_file_name, self.file_name, progress_callback=progress_callback)
+            mesh._upload_file(
+                remote_file_name, self.file_name, progress_callback=progress_callback
+            )
         mesh._complete_upload(remote_file_name)
 
         log.info(f"VolumeMesh successfully uploaded: {mesh.short_description()}")
@@ -471,7 +480,11 @@ class VolumeMeshDraft(ResourceDraft):
         if self.file_name is not None:
             return self._submit_upload_mesh(progress_callback)
 
-        if self.surface_mesh_id is not None and self.name is not None and self.params is not None:
+        if (
+            self.surface_mesh_id is not None
+            and self.name is not None
+            and self.params is not None
+        ):
             return self._submit_from_surface(force_submit=force_submit)
 
         raise Flow360ValueError(
@@ -480,7 +493,10 @@ class VolumeMeshDraft(ResourceDraft):
 
     @classmethod
     def validator_api(
-        cls, params: VolumeMeshingParams, solver_version=None, raise_on_error: bool = True
+        cls,
+        params: VolumeMeshingParams,
+        solver_version=None,
+        raise_on_error: bool = True,
     ):
         """
         validation api: validates surface meshing parameters before submitting
@@ -749,7 +765,11 @@ class VolumeMesh(Flow360Resource):
         """
 
         return Case.create(
-            name, params, volume_mesh_id=self.id, tags=tags, solver_version=solver_version
+            name,
+            params,
+            volume_mesh_id=self.id,
+            tags=tags,
+            solver_version=solver_version,
         )
 
 
@@ -825,7 +845,10 @@ class VolumeMeshMetaV2(AssetMetaBaseModelV2):
 
     project_id: str = pd_v2.Field(alias="projectId")
     deleted: bool = pd_v2.Field()
-    status: VolumeMeshStatusV2 = pd_v2.Field()  # Overshadowing to ensure correct is_final() method
+    status: VolumeMeshStatusV2 = (
+        pd_v2.Field()
+    )  # Overshadowing to ensure correct is_final() method
+    file_name: str = pd_v2.Field(alias="fileName")
 
 
 class VolumeMeshDraftV2(ResourceDraft):
@@ -884,7 +907,9 @@ class VolumeMeshDraftV2(ResourceDraft):
             raise Flow360ValueError("solver_version field is required.")
 
     # pylint: disable=protected-access, too-many-locals
-    def submit(self, description="", progress_callback=None, compress=False) -> VolumeMeshV2:
+    def submit(
+        self, description="", progress_callback=None, compress=False
+    ) -> VolumeMeshV2:
         """
         Submit volume mesh to cloud and create a new project
 
@@ -911,10 +936,9 @@ class VolumeMeshDraftV2(ResourceDraft):
             raise Flow360ValueError("User aborted resource submit.")
 
         mesh_parser = MeshNameParser(self.file_name)
+        format = mesh_parser.format
 
         original_compression = mesh_parser.compression
-        endianness = mesh_parser.endianness
-        mesh_format = mesh_parser.format
 
         if original_compression == CompressionFormat.NONE:
             compression = CompressionFormat.ZST
@@ -924,17 +948,18 @@ class VolumeMeshDraftV2(ResourceDraft):
         if not compress:
             compression = CompressionFormat.NONE
 
-        remote_stem = "volumeMesh"
-        remote_name = f"{remote_stem}{endianness.ext()}{mesh_format.ext()}{compression.ext()}"
+        local_file_to_upload = (
+            f"{mesh_parser.file_name_no_compression}{compression.ext()}"
+        )
 
         req = NewVolumeMeshRequestV2(
             name=self.project_name,
             solver_version=self.solver_version,
             tags=self.tags,
-            file_name=remote_name,
+            file_name=local_file_to_upload,
             length_unit=self.length_unit,
-            format=mesh_format.value,
             description=description,
+            format=format.value,
         )
 
         # Create new volume mesh resource and project
@@ -943,24 +968,32 @@ class VolumeMeshDraftV2(ResourceDraft):
         print("========debug")
         print(resp)
         info = VolumeMeshMetaV2(**resp)
+        remote_name = info.file_name
 
         volume_mesh = VolumeMeshV2(info.id)
 
         # Upload volume mesh file, keep posting the heartbeat to keep server patient about uploading.
-        heartbeat_info = {"resourceId": info.id, "resourceType": "VolumeMesh", "stop": False}
-        heartbeat_thread = threading.Thread(target=post_upload_heartbeat, args=(heartbeat_info,))
+        heartbeat_info = {
+            "resourceId": info.id,
+            "resourceType": "VolumeMesh",
+            "stop": False,
+        }
+        heartbeat_thread = threading.Thread(
+            target=post_upload_heartbeat, args=(heartbeat_info,)
+        )
         heartbeat_thread.start()
 
         # Compress (if not already compressed) and upload
         if original_compression == CompressionFormat.NONE and compress:
             compressed_name = zstd_compress(self.file_name)
+            assert compressed_name == local_file_to_upload
             volume_mesh._webapi._upload_file(
-                remote_name, compressed_name, progress_callback=progress_callback
+                remote_name, local_file_to_upload, progress_callback=progress_callback
             )
             os.remove(compressed_name)
         else:
             volume_mesh._webapi._upload_file(
-                remote_name, self.file_name, progress_callback=progress_callback
+                remote_name, local_file_to_upload, progress_callback=progress_callback
             )
 
         heartbeat_info["stop"] = True
@@ -970,7 +1003,9 @@ class VolumeMeshDraftV2(ResourceDraft):
         volume_mesh._webapi._complete_upload()
         log.debug("Waiting for volume mesh to be processed.")
         volume_mesh._webapi.get_info()
-        log.info(f"VolumeMesh successfully submitted: {volume_mesh._webapi.short_description()}")
+        log.info(
+            f"VolumeMesh successfully submitted: {volume_mesh._webapi.short_description()}"
+        )
 
         return VolumeMeshV2.from_cloud(volume_mesh.id)
 
@@ -1034,7 +1069,9 @@ class VolumeMeshV2(AssetBase):
             Draft of the volume mesh to be submitted
         """
         # For type hint only but proper fix is to fully abstract the Draft class too.
-        return super().from_file(file_names, project_name, solver_version, length_unit, tags)
+        return super().from_file(
+            file_names, project_name, solver_version, length_unit, tags
+        )
 
     def _populate_registry(self):
         if hasattr(self, "_entity_info") is False or self._entity_info is None:
@@ -1081,7 +1118,8 @@ class VolumeMeshV2(AssetBase):
         self._check_registry()
 
         return [
-            surface.name for surface in self.internal_registry.get_bucket(by_type=Surface).entities
+            surface.name
+            for surface in self.internal_registry.get_bucket(by_type=Surface).entities
         ]
 
     @property
@@ -1098,7 +1136,9 @@ class VolumeMeshV2(AssetBase):
 
         return [
             volume.name
-            for volume in self.internal_registry.get_bucket(by_type=GenericVolume).entities
+            for volume in self.internal_registry.get_bucket(
+                by_type=GenericVolume
+            ).entities
         ]
 
     def __getitem__(self, key: str):

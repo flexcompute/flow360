@@ -42,9 +42,13 @@ class NewSurfaceMeshRequest(Flow360Requests):
     tags: Optional[List[str]] = pd.Field()
     geometry_id: Optional[str] = pd.Field(alias="geometryId")
     config: Optional[str] = pd.Field()
-    mesh_format: Optional[Literal["aflr3", "cgns", "stl"]] = pd.Field(alias="meshFormat")
+    mesh_format: Optional[Literal["aflr3", "cgns", "stl"]] = pd.Field(
+        alias="meshFormat"
+    )
     endianness: Optional[Literal["little", "big"]] = pd.Field(alias="meshEndianness")
-    compression: Optional[Literal["gz", "bz2", "zst"]] = pd.Field(alias="meshCompression")
+    compression: Optional[Literal["gz", "bz2", "zst"]] = pd.Field(
+        alias="meshCompression"
+    )
     solver_version: Optional[str] = pd.Field(alias="solverVersion")
     if Flags.beta_features():
         version: Optional[Literal["v1", "v2"]] = pd.Field(default="v1")
@@ -58,7 +62,9 @@ class NewVolumeMeshRequest(Flow360Requests):
     tags: Optional[List[str]] = pd.Field(alias="meshTags")
     format: Literal["aflr3", "cgns"] = pd.Field(alias="meshFormat")
     endianness: Optional[Literal["little", "big"]] = pd.Field(alias="meshEndianness")
-    compression: Optional[Literal["gz", "bz2", "zst"]] = pd.Field(alias="meshCompression")
+    compression: Optional[Literal["gz", "bz2", "zst"]] = pd.Field(
+        alias="meshCompression"
+    )
     mesh_params: Optional[Flow360MeshParams] = pd.Field(alias="meshParams")
     solver_version: Optional[str] = pd.Field(alias="solverVersion")
     if Flags.beta_features():
@@ -85,7 +91,9 @@ class NewFolderRequest(Flow360Requests):
 
     name: str = pd.Field()
     tags: Optional[List[str]] = pd.Field(alias="tags")
-    parent_folder_id: Optional[str] = pd.Field(alias="parentFolderId", default="ROOT.FLOW360")
+    parent_folder_id: Optional[str] = pd.Field(
+        alias="parentFolderId", default="ROOT.FLOW360"
+    )
     type: Literal["folder"] = pd.Field("folder", const=True)
 
 
@@ -159,7 +167,9 @@ class NewVolumeMeshRequestV2(Flow360RequestsV2):
         alias="solverVersion", description="solver version used for the project"
     )
     tags: List[str] = pd_v2.Field(default=[], description="project tags")
-    file_name: str = pd_v2.Field(alias="fileName", description="file name of the volume mesh")
+    file_name: str = pd_v2.Field(
+        alias="fileName", description="file name of the volume mesh"
+    )
     parent_folder_id: str = pd_v2.Field(alias="parentFolderId", default="ROOT.FLOW360")
     length_unit: Literal["m", "mm", "cm", "inch", "ft"] = pd_v2.Field(
         alias="lengthUnit", description="project length unit"
