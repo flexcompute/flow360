@@ -4,7 +4,7 @@ from flow360 import SI_unit_system, u
 from flow360.examples import Airplane
 
 # Activate the pre-production environment because of beta testing status
-fl.Env.preprod.active()
+fl.Env.uat.active()
 
 # Step 1: Create a new project from a predefined geometry file in the Airplane example
 # This initializes a project with the specified geometry and assigns it a name.
@@ -38,6 +38,7 @@ with SI_unit_system:
         operating_condition=fl.AerospaceCondition(
             velocity_magnitude=100,  # Velocity of 100 m/s
             alpha=5 * u.deg,  # Angle of attack of 5 degrees
+            reference_velocity_magnitude=100,  # Reference velocity magnitude
         ),
         # Time-stepping configuration: specifying steady-state with a maximum step limit
         time_stepping=fl.Steady(max_steps=1000),
@@ -64,4 +65,4 @@ with SI_unit_system:
     )
 
 # Step 5: Run the simulation case with the specified parameters
-project.run_case(params=params, name="Case of Simple Airplane from Python")
+project.run_case(params=params, name="Case-with-ref-vel")
