@@ -354,7 +354,6 @@ class Surface(_SurfaceEntityBase):
     # TODO: Should inherit from `ReferenceGeometry` but we do not support this from solver side.
 
 
-@final
 class GhostSurface(_SurfaceEntityBase):
     """
     Represents a boudary surface that may or may not be generated therefore may or may not exist.
@@ -372,9 +371,37 @@ class GhostSurface(_SurfaceEntityBase):
 
     """
 
-    private_attribute_entity_type_name: Literal["GhostSurface"] = pd.Field(
+    type_name: Literal["GhostSurface"] = pd.Field(
         "GhostSurface", frozen=True
     )
+
+@final
+class GhostSphere(GhostSurface):
+    type_name: Literal["GhostSphere"] = pd.Field("GhostSphere", frozen=True)
+    center: LengthType.Point = pd.Field(alias="center")
+    radius: LengthType.Positive = pd.Field(alias="radius")
+
+@final
+class GhostHemisphere(GhostSurface):
+    type_name: Literal["GhostHemisphere"] = pd.Field("GhostHemisphere", frozen=True)
+    center: LengthType.Point = pd.Field(alias="center")
+    radius: LengthType.Positive = pd.Field(alias="radius")
+    base_normal_axis: Axis = pd.Field(alias="baseNormalAxis")
+
+@final
+class GhostCircularPlane(GhostSurface)
+    type_name: Literal["GhostCircularPlane"] = pd.Field("GhostCircularPlane", frozen=True)
+    center: LengthType.Point = pd.Field(alias="center")
+    radius: LengthType.Positive = pd.Field(alias="radius")
+    normal_axis: Axis = pd.Field(alias="normalAxis")
+
+@final
+class GhostCylindericalCurvedSurface(GhostSurface)
+    type_name: Literal["GhostCylindericalCurvedSurface"] = pd.Field("GhostCylindericalCurvedSurface", frozen=True)
+    center: LengthType.Point = pd.Field(alias="center")
+    radius: LengthType.Positive = pd.Field(alias="radius")
+    height: LengthType.Positive = pd.Field(alias="height")
+    axis: Axis = pd.Field(alias="axis")
 
 
 class SurfacePair(Flow360BaseModel):

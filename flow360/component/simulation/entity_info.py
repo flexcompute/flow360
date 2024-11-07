@@ -35,6 +35,7 @@ class EntityInfoModel(pd.BaseModel, metaclass=ABCMeta):
     # Storing entities that appeared in the simulation JSON. (Otherwise when front end loads the JSON it will delete
     # entities that appear in simulation JSON but did not appear in EntityInfo)
     draft_entities: List[DraftEntityTypes] = pd.Field([])
+    ghost_entities: List[GhostSurface] = pd.Field([])
 
     @abstractmethod
     def get_boundaries(self, attribute_name: str = None) -> list:
