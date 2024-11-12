@@ -8,11 +8,7 @@ from typing import List, Optional, Union
 
 import pydantic.v1 as pd
 
-from ..cloud.flow360_requests import (
-    MoveFolderItem,
-    MoveToFolderRequest,
-    NewFolderRequest,
-)
+from ..cloud.requests import MoveFolderItem, MoveToFolderRequest, NewFolderRequest
 from ..cloud.rest_api import RestApi
 from ..exceptions import Flow360ValueError
 from ..log import log

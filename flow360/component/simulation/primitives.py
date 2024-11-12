@@ -60,32 +60,18 @@ OrthogonalAxes = Annotated[Tuple[Axis, Axis], pd.AfterValidator(_check_axis_is_o
 
 class ReferenceGeometry(Flow360BaseModel):
     """
-    :class:`ReferenceGeometry` class contains all geometrical related refrence values.
-
-    Example
-    -------
-    >>> ReferenceGeometry(
-    ...     moment_center=(1, 2, 1) * u.m,
-    ...     moment_length=(1, 1, 1) * u.m,
-    ...     area=1.5 * u.m**2
-    ... )
-    >>> ReferenceGeometry(
-    ...     moment_center=(1, 2, 1) * u.m,
-    ...     moment_length=1 * u.m,
-    ...     area=1.5 * u.m**2
-    ... )  # Equivalent to above
+    Contains all geometrical related refrence values
+    Note:
+    - mesh_unit is removed from here and will be a property
+    TODO:
+    - Support expression for time-dependent axis etc?
+    - What about force axis?
     """
 
     # pylint: disable=no-member
-    moment_center: Optional[LengthType.Point] = pd.Field(
-        None, description="The x, y, z coordinate of moment center."
-    )
-    moment_length: Optional[Union[LengthType.Positive, LengthType.PositiveVector]] = pd.Field(
-        None, description="The x, y, z component-wise moment reference lengths."
-    )
-    area: Optional[AreaType.Positive] = pd.Field(
-        None, description="The reference area of the geometry."
-    )
+    moment_center: Optional[LengthType.Point] = pd.Field(None)
+    moment_length: Optional[Union[LengthType.Positive, LengthType.PositiveVector]] = pd.Field(None)
+    area: Optional[AreaType.Positive] = pd.Field(None)
 
 
 class Transformation(Flow360BaseModel):
@@ -198,10 +184,10 @@ class GenericVolume(_VolumeEntityBase):
     private_attribute_entity_type_name: Literal["GenericVolume"] = pd.Field(
         "GenericVolume", frozen=True
     )
-    axes: Optional[OrthogonalAxes] = pd.Field(None, description="")  # Porous media support
+    axes: Optional[OrthogonalAxes] = pd.Field(None)  # Porous media support
     axis: Optional[Axis] = pd.Field(None)  # Rotation support
     # pylint: disable=no-member
-    center: Optional[LengthType.Point] = pd.Field(None, description="")  # Rotation support
+    center: Optional[LengthType.Point] = pd.Field(None)  # Rotation support
 
 
 def rotation_matrix_from_axis_and_angle(axis, angle):
@@ -236,7 +222,7 @@ class BoxCache(Flow360BaseModel):
 @final
 class Box(MultiConstructorBaseModel, _VolumeEntityBase):
     """
-    :class:`Box` class represents a box in three-dimensional space.
+    Represents a box in three-dimensional space.
     """
 
     type_name: Literal["Box"] = pd.Field("Box", frozen=True)
@@ -246,8 +232,8 @@ class Box(MultiConstructorBaseModel, _VolumeEntityBase):
     size: LengthType.PositiveVector = pd.Field(
         description="The dimensions of the box (length, width, height)."
     )
-    axis_of_rotation: Axis = pd.Field(default=(0, 0, 1), description="The rotation axis.")
-    angle_of_rotation: AngleType = pd.Field(default=0 * u.degree, description="The rotation angle.")
+    axis_of_rotation: Axis = pd.Field(default=(0, 0, 1))
+    angle_of_rotation: AngleType = pd.Field(default=0 * u.degree)
     private_attribute_input_cache: BoxCache = pd.Field(BoxCache(), frozen=True)
 
     # pylint: disable=no-self-argument
@@ -321,7 +307,7 @@ class Box(MultiConstructorBaseModel, _VolumeEntityBase):
 @final
 class Cylinder(_VolumeEntityBase):
     """
-    :class:`Cylinder` class represents a cylinder in three-dimensional space.
+    Represents a cylinder in three-dimensional space.
     """
 
     private_attribute_entity_type_name: Literal["Cylinder"] = pd.Field("Cylinder", frozen=True)
@@ -346,7 +332,7 @@ class Cylinder(_VolumeEntityBase):
 @final
 class Surface(_SurfaceEntityBase):
     """
-    :class:`Surface` represents a boudary surface in three-dimensional space.
+    Represents a boudary surface in three-dimensional space.
     """
 
     private_attribute_entity_type_name: Literal["Surface"] = pd.Field("Surface", frozen=True)

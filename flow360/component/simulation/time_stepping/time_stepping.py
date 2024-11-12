@@ -18,20 +18,13 @@ def _apply_default_to_none(original, default):
 
 class RampCFL(Flow360BaseModel):
     """
-    :class:`RampCFL` class for the Ramp CFL setting of time stepping.
+    Ramp CFL for time stepping component
     """
 
     type: Literal["ramp"] = pd.Field("ramp", frozen=True)
-    initial: Optional[pd.PositiveFloat] = pd.Field(
-        None, description="Initial CFL for solving pseudo time step."
-    )
-    final: Optional[pd.PositiveFloat] = pd.Field(
-        None, description="Final CFL for solving pseudo time step."
-    )
-    ramp_steps: Optional[pd.PositiveInt] = pd.Field(
-        None,
-        description="Number of pseudo steps before reaching :paramref:`RampCFL.final` within 1 physical step.",
-    )
+    initial: Optional[pd.PositiveFloat] = pd.Field(None)
+    final: Optional[pd.PositiveFloat] = pd.Field(None)
+    ramp_steps: Optional[pd.PositiveInt] = pd.Field(None)
 
     @classmethod
     def default_unsteady(cls):
@@ -50,27 +43,14 @@ class RampCFL(Flow360BaseModel):
 
 class AdaptiveCFL(Flow360BaseModel):
     """
-    :class:`AdaptiveCFL` class for Adaptive CFL setting of time stepping.
+    Adaptive CFL for time stepping component
     """
 
     type: Literal["adaptive"] = pd.Field("adaptive", frozen=True)
-    min: pd.PositiveFloat = pd.Field(
-        default=0.1, description="The minimum allowable value for Adaptive CFL."
-    )
-    max: Optional[pd.PositiveFloat] = pd.Field(
-        None, description="The maximum allowable value for Adaptive CFL."
-    )
-    max_relative_change: Optional[pd.PositiveFloat] = pd.Field(
-        None,
-        description="The maximum allowable relative change of CFL (%) at each pseudo step. "
-        + "In unsteady simulations, the value of :paramref:`AdaptiveCFL.max_relative_change` "
-        + "is updated automatically depending on how well the solver converges in each physical step.",
-    )
-    convergence_limiting_factor: Optional[pd.PositiveFloat] = pd.Field(
-        None,
-        description="This factor specifies the level of conservativeness when using Adaptive CFL. "
-        + "Smaller values correspond to a more conservative limitation on the value of CFL.",
-    )
+    min: pd.PositiveFloat = pd.Field(default=0.1)
+    max: Optional[pd.PositiveFloat] = pd.Field(None)
+    max_relative_change: Optional[pd.PositiveFloat] = pd.Field(None)
+    convergence_limiting_factor: Optional[pd.PositiveFloat] = pd.Field(None)
 
     @classmethod
     def default_unsteady(cls):
@@ -97,14 +77,14 @@ class BaseTimeStepping(Flow360BaseModel, metaclass=ABCMeta):
 
 class Steady(BaseTimeStepping):
     """
-    :class:`Steady` class for specifying steady simulation.
+    Steady time stepping component
     """
 
     type_name: Literal["Steady"] = pd.Field("Steady", frozen=True)
     max_steps: int = pd.Field(2000, gt=0, le=100000, description="Maximum number of pseudo steps.")
     # pylint: disable=duplicate-code
     CFL: Union[RampCFL, AdaptiveCFL] = pd.Field(
-        default=AdaptiveCFL.default_steady(), description="CFL settings."
+        default=AdaptiveCFL.default_steady(),
     )
 
     @pd.model_validator(mode="before")
@@ -125,7 +105,7 @@ class Steady(BaseTimeStepping):
 
 class Unsteady(BaseTimeStepping):
     """
-    :class:`Unsteady` class for specifying unsteady simulation.
+    Unsteady time stepping component
     """
 
     type_name: Literal["Unsteady"] = pd.Field("Unsteady", frozen=True)
@@ -138,7 +118,6 @@ class Unsteady(BaseTimeStepping):
     # pylint: disable=duplicate-code
     CFL: Union[RampCFL, AdaptiveCFL] = pd.Field(
         default=AdaptiveCFL.default_unsteady(),
-        description="CFL settings within each physical step.",
     )
 
     @pd.model_validator(mode="before")
