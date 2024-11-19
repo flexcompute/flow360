@@ -1,7 +1,7 @@
 from matplotlib.pyplot import show
 
 import flow360.component.simulation.units as u
-import flow360.v1 as fl
+import flow360 as fl
 from flow360.component.project import Project
 from flow360.component.simulation.models.surface_models import (
     Freestream,
@@ -14,6 +14,7 @@ from flow360.component.simulation.operating_condition.operating_condition import
 from flow360.component.simulation.simulation_params import SimulationParams
 from flow360.component.simulation.unit_system import SI_unit_system
 from flow360.examples import OM6wing
+from flow360 import *
 
 fl.Env.dev.active()
 
@@ -28,15 +29,17 @@ volume_mesh = project.volume_mesh
 with SI_unit_system:
     params = SimulationParams(
         operating_condition=AerospaceCondition(velocity_magnitude=100 * u.m / u.s),
+        time_stepping = Steady(CFL=RampCFL(initial=1, final=100000, ramp_steps=20)),
         models=[
             Wall(entities=[volume_mesh["1"]]),
             Freestream(entities=[volume_mesh["3"]]),
             SymmetryPlane(entities=[volume_mesh["2"]]),
         ],
+        outputs=[AeroAcousticOutput(observers=[[0,0.56,0]])]
     )
 
 project.run_case(params=params)
 
-residuals = project.case.results.nonlinear_residuals
-residuals.as_dataframe().plot(x="pseudo_step", logy=True)
-show()
+#residuals = project.case.results.nonlinear_residuals
+#residuals.as_dataframe().plot(x="pseudo_step", logy=True)
+#show()
