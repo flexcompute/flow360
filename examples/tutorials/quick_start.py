@@ -3,9 +3,6 @@ import flow360 as fl
 from flow360 import SI_unit_system, u
 from flow360.examples import Airplane
 
-# Activate the pre-production environment because of beta testing status
-fl.Env.preprod.active()
-
 # Step 1: Create a new project from a predefined geometry file in the Airplane example
 # This initializes a project with the specified geometry and assigns it a name.
 project = fl.Project.from_file(Airplane.geometry, name="Python Project (Geometry, from file)")

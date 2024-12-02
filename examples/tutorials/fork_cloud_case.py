@@ -1,8 +1,6 @@
 import flow360 as fl
 from flow360 import u
 
-fl.Env.preprod.active()
-
 project = fl.Project.from_cloud("PROJECT_ID_HERE")
 
 parent_case = fl.Case.from_cloud("PARENT_CASE_ID_HERE")

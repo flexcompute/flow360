@@ -1,8 +1,6 @@
 import flow360 as fl
 from flow360 import u
 
-fl.Env.preprod.active()
-
 my_project = fl.Project.from_cloud("PROJECT_ID_HERE")
 # Applicable for projects with Geometry being the starting point.
 geo = my_project.geometry

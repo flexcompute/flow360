@@ -3,8 +3,6 @@ import math
 import flow360 as fl
 from flow360.examples import TutorailRANSXv15
 
-fl.Env.preprod.active()
-
 TutorailRANSXv15.get_files()
 project = fl.Project.from_file(
     TutorailRANSXv15.mesh_filename,

@@ -2,8 +2,6 @@ import flow360 as fl
 from flow360.component.simulation.unit_system import SI_unit_system, u
 from flow360.examples import Tutorial2D30p30n
 
-fl.Env.preprod.active()
-
 Tutorial2D30p30n.get_files()
 
 project = fl.Project.from_file(Tutorial2D30p30n.geometry, name="Tutorial 2D 30p30n from Python")

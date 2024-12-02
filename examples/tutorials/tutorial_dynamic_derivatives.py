@@ -3,8 +3,6 @@ import math
 import flow360 as fl
 from flow360.examples import TutorailDynamicDerivatives
 
-fl.Env.preprod.active()
-
 TutorailDynamicDerivatives.get_files()
 project = fl.Project.from_file(
     TutorailDynamicDerivatives.geometry,
