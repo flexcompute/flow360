@@ -148,7 +148,7 @@ class Draft(Flow360Resource):
         try:
             # pylint: disable=protected-access
             run_response = self.post(
-                json={"upTo": target_asset._cloud_resource_type_name, "useInHouse": False},
+                json={"upTo": target_asset._cloud_resource_type_name, "useInHouse": True},
                 method="run",
             )
         except Flow360WebError as err:
