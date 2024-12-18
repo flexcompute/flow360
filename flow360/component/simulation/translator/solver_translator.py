@@ -179,6 +179,7 @@ def rotation_translator(model: Rotation):
     """Rotation translator"""
     volume_zone = {
         "modelType": "FluidDynamics",
+        "isRotatingReferenceFrame": model.rotating_reference_frame_model,
         "referenceFrame": {},
     }
     if model.parent_volume is not None:
@@ -458,6 +459,10 @@ def translate_acoustic_output(output_params: list):
             aeroacoustic_output["observers"] = [item.value.tolist() for item in output.observers]
             aeroacoustic_output["writePerSurfaceOutput"] = output.write_per_surface_output
             aeroacoustic_output["patchType"] = output.patch_type
+            if output.permeable_surfaces is not None:
+                aeroacoustic_output["permeableSurfaces"] = [
+                    item.full_name for item in output.permeable_surfaces.stored_entities
+                ]
             return aeroacoustic_output
     return None
 
