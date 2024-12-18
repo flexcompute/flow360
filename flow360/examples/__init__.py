@@ -29,7 +29,7 @@ __all__ = [
     "Cylinder2D",
     "Cylinder3D",
     "MonitorsAndSlices",
-    "NRELS809",    
+    "NRELS809",
     "OM6wing",
     "OM6wingUserDefinedDynamics",
     "RotatingSpheres",
