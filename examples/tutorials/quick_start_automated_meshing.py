@@ -24,10 +24,10 @@ with fl.SI_unit_system:
     cylinders = [
         fl.Cylinder(
             name=f"cylinder{i+1}",
-            axis=[0, 1, 0], # Axis of the cylinder
-            center=[0.7, -1, 0],    # Center point of the cylinder
+            axis=[0, 1, 0],  # Axis of the cylinder
+            center=[0.7, -1, 0],  # Center point of the cylinder
             outer_radius=outer_radius,  # Outer radius of the cylinder
-            height=2,   # Height of the cylinder
+            height=2,  # Height of the cylinder
         )
         # Create cylinder of outer radiuses 1.1, 2.2, 3.3 and 4.5
         for i, outer_radius in enumerate([1.1, 2.2, 3.3, 4.5])
@@ -45,26 +45,34 @@ with fl.SI_unit_system:
         meshing=fl.MeshingParams(
             defaults=fl.MeshingDefaults(
                 surface_edge_growth_rate=1.07,  # Growth rate of anisotropic layers grown from edges
-                surface_max_edge_length=0.15,   # Maximum edge length on surfaces
-                curvature_resolution_angle=10 * fl.u.deg,   # Maximum angle a single element can span
-                boundary_layer_first_layer_thickness=1.35e-6,   # Boundary layer thickness
-                boundary_layer_growth_rate=1.04,    # Growth rate of the boundary layer
+                surface_max_edge_length=0.15,  # Maximum edge length on surfaces
+                curvature_resolution_angle=10 * fl.u.deg,  # Maximum angle a single element can span
+                boundary_layer_first_layer_thickness=1.35e-6,  # Boundary layer thickness
+                boundary_layer_growth_rate=1.04,  # Growth rate of the boundary layer
             ),
-            refinement_factor=1.45, # 1.45 times finer mesh in refinement regions
-            volume_zones=[farfield],    # Apply the automated far-field boundary condition
+            refinement_factor=1.45,  # 1.45 times finer mesh in refinement regions
+            volume_zones=[farfield],  # Apply the automated far-field boundary condition
             # Local mesh refinements
             refinements=[
                 fl.SurfaceEdgeRefinement(
-                    edges=[geometry["wingLeadingEdge"], geometry["wingTrailingEdge"]],  # Apply refinement on leading and trailing edges
-                    method=fl.HeightBasedRefinement(value=3e-4),    # Refine the mesh to have a first layer height of 3e-04
+                    edges=[
+                        geometry["wingLeadingEdge"],
+                        geometry["wingTrailingEdge"],
+                    ],  # Apply refinement on leading and trailing edges
+                    method=fl.HeightBasedRefinement(
+                        value=3e-4
+                    ),  # Refine the mesh to have a first layer height of 3e-04
                 ),
                 fl.SurfaceEdgeRefinement(
-                    edges=[geometry["rootAirfoilEdge"], geometry["tipAirfoilEdge"]],    # Apply refinement on root and tip of the airfoil
-                    method=fl.ProjectAnisoSpacing(),    # Refine the mesh to have anisotropic spacing from neighboring faces to the edge
+                    edges=[
+                        geometry["rootAirfoilEdge"],
+                        geometry["tipAirfoilEdge"],
+                    ],  # Apply refinement on root and tip of the airfoil
+                    method=fl.ProjectAnisoSpacing(),  # Refine the mesh to have anisotropic spacing from neighboring faces to the edge
                 ),
                 fl.SurfaceRefinement(
-                    faces=[geometry["wing"]],   # Apply refinement to wing surfaces
-                    max_edge_length=0.15    # Refine the mesh to have maximum edge length of 0.15
+                    faces=[geometry["wing"]],  # Apply refinement to wing surfaces
+                    max_edge_length=0.15,  # Refine the mesh to have maximum edge length of 0.15
                 ),
                 # Uniform spacing refinements for cylinders around and behind the geometry
                 fl.UniformRefinement(name="refinement1", spacing=0.075, entities=[cylinders[0]]),
@@ -77,51 +85,53 @@ with fl.SI_unit_system:
         # Reference geometry parameters for the simulation (e.g., center of pressure)
         reference_geometry=fl.ReferenceGeometry(
             area=1.15315084119231,  # Reference area
-            moment_center=[0, 0, 0],    # Reference moment center
-            moment_length=[1.47602, 0.801672958512342, 1.47602],    # Reference moment length
+            moment_center=[0, 0, 0],  # Reference moment center
+            moment_length=[1.47602, 0.801672958512342, 1.47602],  # Reference moment length
         ),
         # Operating conditions
         operating_condition=fl.operating_condition_from_mach_reynolds(
-            reynolds=14.6e6,    # Reynolds number of 14.6e+06
+            reynolds=14.6e6,  # Reynolds number of 14.6e+06
             mach=0.84,  # Mach number of 0.84
-            project_length_unit=fl.u.m, # Length/Grid unit for nondimensionalization
-            temperature=297.78, # Temperature of 297.78 K
+            project_length_unit=fl.u.m,  # Length/Grid unit for nondimensionalization
+            temperature=297.78,  # Temperature of 297.78 K
             alpha=3.06 * fl.u.deg,  # Angle of attack of 3.06 degrees
         ),
         # Time-stepping configuration: specifying steady-state with a maximum step limit
         time_stepping=fl.Steady(
-            max_steps=5000, # Maximum step limit
+            max_steps=5000,  # Maximum step limit
             CFL=fl.RampCFL(
                 initial=1,  # Initial CFL value
                 final=200,  # Final CFL value
-                ramp_steps=2250 # Number of steps before reaching final value starting from initial
-            )
+                ramp_steps=2250,  # Number of steps before reaching final value starting from initial
+            ),
         ),
         # Define models for the simulation, such as walls and freestream conditions
         models=[
-            fl.Fluid(), # Solver settings can be defined here, in this case they are default
+            fl.Fluid(),  # Solver settings can be defined here, in this case they are default
             fl.Wall(
-                surfaces=[geometry["wing"]],  # Apply no-slip wall boundary condition to wing surfaces
-                name="NoSlipWall"
+                surfaces=[
+                    geometry["wing"]
+                ],  # Apply no-slip wall boundary condition to wing surfaces
+                name="NoSlipWall",
             ),
             fl.SlipWall(
                 surfaces=farfield.symmetry_planes,  # Apply slip wall boundary condition on symmetry planes
-                name="SlipWall"
+                name="SlipWall",
             ),
             fl.Freestream(
-                surfaces=farfield.farfield, # Apply freestream boundary condition on farfield
-                name="Freestream"
+                surfaces=farfield.farfield,  # Apply freestream boundary condition on farfield
+                name="Freestream",
             ),
         ],
         # Define output parameters for the simulation
         outputs=[
             fl.SurfaceOutput(
-                surfaces=[geometry["wing"]],    # Select wing surface for output
-                output_fields=["primitiveVars", "Cp", "Cf"] # Output fields for post-processing
+                surfaces=[geometry["wing"]],  # Select wing surface for output
+                output_fields=["primitiveVars", "Cp", "Cf"],  # Output fields for post-processing
             ),
             fl.VolumeOutput(
-                output_fields=["primitiveVars", "Mach"] # Output fields for post-processing
-            )
+                output_fields=["primitiveVars", "Mach"]  # Output fields for post-processing
+            ),
         ],
     )
 
