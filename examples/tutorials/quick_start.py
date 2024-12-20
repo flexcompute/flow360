@@ -3,6 +3,8 @@ import flow360 as fl
 from flow360.examples import Airplane
 
 # Step 1: Create a new project from a predefined geometry file in the Airplane example
+# Download the predefined geometry files
+Airplane.get_files()
 # This initializes a project with the specified geometry and assigns it a name.
 project = fl.Project.from_file(Airplane.geometry, name="Python Project (Geometry, from file)")
 geo = project.geometry  # Access the geometry of the project
