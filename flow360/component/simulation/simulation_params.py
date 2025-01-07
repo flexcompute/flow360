@@ -4,7 +4,7 @@ Flow360 simulation parameters
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, List, Literal, Optional, Union
 
 import pydantic as pd
 
@@ -57,6 +57,7 @@ from flow360.component.simulation.unit_system import (
 from flow360.component.simulation.user_defined_dynamics.user_defined_dynamics import (
     UserDefinedDynamic,
 )
+from flow360.component.simulation.utils import model_attribute_unlock
 from flow360.component.simulation.validation.validation_output import (
     _check_output_fields,
 )
@@ -189,7 +190,7 @@ class SimulationParams(_ParamModelBase):
         None,
         discriminator="type_name",
         description="Global operating condition."
-        " See :ref:`Operating condition <operating_condition>` for more details.",
+        " See :ref:`Operating Condition <operating_condition>` for more details.",
     )
     #
 
@@ -202,16 +203,16 @@ class SimulationParams(_ParamModelBase):
     models: Optional[List[ModelTypes]] = CaseField(
         None,
         description="Solver settings and numerical models and boundary condition settings."
-        " See :ref:`Volume models <volume_models>` and :ref:`Surface models <surface_models>` for more details.",
+        " See :ref:`Volume Models <volume_models>` and :ref:`Surface Models <surface_models>` for more details.",
     )
     time_stepping: Union[Steady, Unsteady] = CaseField(
         Steady(),
         discriminator="type_name",
-        description="Time stepping settings. See :ref:`Time stepping <timeStepping>` for more details.",
+        description="Time stepping settings. See :ref:`Time Stepping <timeStepping>` for more details.",
     )
     user_defined_dynamics: Optional[List[UserDefinedDynamic]] = CaseField(
         None,
-        description="User defined dynamics. See :ref:`User defined dynamics <user_defined_dynamics>` for more details.",
+        description="User defined dynamics. See :ref:`User Defined Dynamics <user_defined_dynamics>` for more details.",
     )
 
     user_defined_fields: List[UserDefinedField] = CaseField(
@@ -244,6 +245,35 @@ class SimulationParams(_ParamModelBase):
             with self.unit_system:
                 return super().preprocess(params=self, mesh_unit=mesh_unit, exclude=exclude)
         return super().preprocess(params=self, mesh_unit=mesh_unit, exclude=exclude)
+
+    def convert_to_unit_system(
+        self,
+        unit_system: Literal["SI", "Imperial", "CGS"],
+        exclude: list = None,
+    ) -> SimulationParams:
+        """Internal function for non-dimensionalizing the simulation parameters"""
+        if exclude is None:
+            exclude = []
+
+        if unit_system not in ["SI", "Imperial", "CGS"]:
+            raise Flow360ConfigurationError(
+                f"Invalid unit system: {unit_system}. Must be one of ['SI', 'Imperial', 'CGS']"
+            )
+        converted_param = None
+        if unit_system_manager.current is None:
+            # pylint: disable=not-context-manager
+            with self.unit_system:
+                converted_param = super().convert_to_unit_system(
+                    to_unit_system=unit_system, exclude=exclude
+                )
+        else:
+            converted_param = super().convert_to_unit_system(
+                to_unit_system=unit_system, exclude=exclude
+            )
+        # Change the recorded unit system
+        with model_attribute_unlock(converted_param, "unit_system"):
+            converted_param.unit_system = UnitSystem.from_dict(**{"name": unit_system})
+        return converted_param
 
     # pylint: disable=no-self-argument
     @pd.field_validator("models", mode="after")
