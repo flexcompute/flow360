@@ -2,20 +2,14 @@
 Meshing settings that applies to volumes.
 """
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing import Literal, Optional
 
 import pydantic as pd
 
 from flow360.component.simulation.framework.base_model import Flow360BaseModel
 from flow360.component.simulation.framework.entity_base import EntityList
-from flow360.component.simulation.primitives import (
-    Box,
-    Cylinder,
-    GenericVolume,
-    GhostSurface,
-    Surface,
-)
+from flow360.component.simulation.primitives import Box, Cylinder, Surface
 from flow360.component.simulation.unit_system import LengthType
 
 
@@ -119,7 +113,15 @@ class RotationCylinder(CylindricalRefinementBase):
         return values
 
 
-class AutomatedFarfield(Flow360BaseModel):
+class FarfieldModelBase(Flow360BaseModel, metaclass=ABCMeta):
+    """Virtual base class for different farfield meshing models"""
+
+    @abstractmethod
+    def _valid_ghost_surface_names(self):
+        """Returns the valid ghost surface names for the farfield model."""
+
+
+class AutomatedFarfield(FarfieldModelBase):
     """
     Settings for automatic farfield volume zone generation.
     """
@@ -138,34 +140,43 @@ class AutomatedFarfield(Flow360BaseModel):
                     Both sides of the farfield disk will be treated as “symmetric plane”.
         """,
     )
-    private_attribute_entity: GenericVolume = pd.Field(
-        GenericVolume(name="__farfield_zone_name_not_properly_set_yet"), frozen=True, exclude=True
-    )
 
     @property
     def farfield(self):
-        """Returns the farfield boundary surface."""
-        return GhostSurface(name="farfield")
+        """[Deprecated] Returns the farfield boundary surface."""
+        raise DeprecationWarning(
+            "use of `.farfield` is deprecated. Please retrieve the farfield surface directly"
+            " from geometry instance like other surfaces instead. e.g. `my_geometry['farfield']`"
+        )
 
     @property
     def symmetry_planes(self):
-        """Returns the symmetry plane boundary surface(s)."""
+        """[Deprecated] Returns the symmetry plane boundary surface(s)."""
+        raise DeprecationWarning(
+            "use of `.symmetry_planes` is deprecated. Please retrieve the symmetric surface(s) directly"
+            " from geometry instance like other surfaces instead. e.g. `my_geometry['symmetric']` or"
+            " `my_geometry['symmetric-1'], my_geometry['symmetric-2']` depending on their availability."
+        )
+
+    def _valid_ghost_surface_names(self):
+        """Returns the valid ghost surface names for the farfield model."""
         if self.method == "auto":
-            return GhostSurface(name="symmetric")
+            return ["farfield", "symmetric"]
         if self.method == "quasi-3d":
-            return [
-                GhostSurface(name="symmetric-1"),
-                GhostSurface(name="symmetric-2"),
-            ]
-        raise ValueError(f"Unsupported method: {self.method}")
+            return ["farfield", "symmetric-1", "symmetric-2"]
+        raise ValueError(f"Unknown method for `AutomatedFarfield`: {self.method}")
 
 
-class UserDefinedFarfield(Flow360BaseModel):
+class UserDefinedFarfield(FarfieldModelBase):
     """
     Setting for user defined farfield zone generation.
-    This means the "farfield" boundaires are comming from the supplied geometry file
+    This means the "farfield" boundaries are coming from the supplied geometry file
     and meshing will take place inside this "geometry".
     """
 
     type: Literal["UserDefinedFarfield"] = pd.Field("UserDefinedFarfield", frozen=True)
     name: Optional[str] = pd.Field(None)
+
+    def _valid_ghost_surface_names(self):
+        """Returns the valid ghost surface names for the farfield model."""
+        return []
