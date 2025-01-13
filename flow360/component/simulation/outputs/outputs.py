@@ -71,6 +71,25 @@ class UserDefinedField(Flow360BaseModel):
     )
 
 
+class _PseudoSteppingAnimationSetting(Flow360BaseModel):
+    """
+    Control how frequently in terms of pseudo stepping the output files are generately
+    """
+
+    frequency_in_pseudo_stepping: int = pd.Field(
+        default=-1,
+        ge=-1,
+        description="Frequency (in number of pseudo time steps) at which output is saved. "
+        + "-1 is at end of simulation.",
+    )
+    frequency_offset_in_pseudo_stepping: int = pd.Field(
+        default=0,
+        ge=0,
+        description="Offset (in number of pseudo time steps) at which output animation is started."
+        + " 0 is at beginning of simulation.",
+    )
+
+
 class _AnimationSettings(Flow360BaseModel):
     """
     Controls how frequently the output files are generated.
@@ -100,7 +119,7 @@ class _AnimationAndFileFormatSettings(_AnimationSettings):
     )
 
 
-class SurfaceOutput(_AnimationAndFileFormatSettings):
+class SurfaceOutput(_AnimationAndFileFormatSettings, _PseudoSteppingAnimationSetting):
     """
 
     :class:`SurfaceOutput` class for surface output settings.
@@ -190,7 +209,7 @@ class TimeAverageSurfaceOutput(SurfaceOutput):
     )
 
 
-class VolumeOutput(_AnimationAndFileFormatSettings):
+class VolumeOutput(_AnimationAndFileFormatSettings, _PseudoSteppingAnimationSetting):
     """
     :class:`VolumeOutput` class for volume output settings.
 
@@ -247,7 +266,7 @@ class TimeAverageVolumeOutput(VolumeOutput):
     )
 
 
-class SliceOutput(_AnimationAndFileFormatSettings):
+class SliceOutput(_AnimationAndFileFormatSettings, _PseudoSteppingAnimationSetting):
     """
     :class:`SliceOutput` class for slice output settings.
 
@@ -319,7 +338,7 @@ class TimeAverageSliceOutput(SliceOutput):
     output_type: Literal["TimeAverageSliceOutput"] = pd.Field("TimeAverageSliceOutput", frozen=True)
 
 
-class IsosurfaceOutput(_AnimationAndFileFormatSettings):
+class IsosurfaceOutput(_AnimationAndFileFormatSettings, _PseudoSteppingAnimationSetting):
     """
 
     :class:`IsosurfaceOutput` class for isosurface output settings.
@@ -533,7 +552,7 @@ class SurfaceProbeOutput(Flow360BaseModel):
     output_type: Literal["SurfaceProbeOutput"] = pd.Field("SurfaceProbeOutput", frozen=True)
 
 
-class SurfaceSliceOutput(_AnimationAndFileFormatSettings):
+class SurfaceSliceOutput(_AnimationAndFileFormatSettings, _PseudoSteppingAnimationSetting):
     """
     Surface slice settings.
     """
