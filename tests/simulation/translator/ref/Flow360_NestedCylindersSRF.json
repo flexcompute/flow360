@@ -42,6 +42,7 @@
     },
     "volumeZones": {
         "blk-1": {
+            "isRotatingReferenceFrame": true,
             "referenceFrame": {
                 "axisOfRotation": [
                     0.0,
@@ -61,7 +62,8 @@
     "boundaries": {
         "blk-1/Cylinder": {
             "type": "NoSlipWall",
-            "heatFlux": 0.0
+            "heatFlux": 0.0,
+            "roughnessHeight": 0.0
         },
         "blk-1/OuterWall": {
             "type": "NoSlipWall",
@@ -70,7 +72,8 @@
                 0.0,
                 0.0
             ],
-            "heatFlux": 0.0
+            "heatFlux": 0.0,
+            "roughnessHeight": 0.0
         },
         "blk-1/InletOutlet": {
             "type": "Freestream"

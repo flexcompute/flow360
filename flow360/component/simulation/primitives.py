@@ -28,7 +28,7 @@ def _get_boundary_full_name(surface_name: str, volume_mesh_meta: dict[str, dict]
     """Ideally volume_mesh_meta should be a pydantic model.
 
     TODO:  Note that the same surface_name may appear in different blocks. E.g.
-    `farFieldBlock/slipWall`, and `plateBlock/slipWall`. Currently the mesher does not support spliting boundary into
+    `farFieldBlock/slipWall`, and `plateBlock/slipWall`. Currently the mesher does not support splitting boundary into
     blocks but we will need to support this someday.
     """
     for zone_name, zone_meta in volume_mesh_meta["zones"].items():
@@ -61,7 +61,7 @@ OrthogonalAxes = Annotated[Tuple[Axis, Axis], pd.AfterValidator(_check_axis_is_o
 
 class ReferenceGeometry(Flow360BaseModel):
     """
-    :class:`ReferenceGeometry` class contains all geometrical related refrence values.
+    :class:`ReferenceGeometry` class contains all geometrical related reference values.
 
     Example
     -------
@@ -183,7 +183,7 @@ class Edge(_EdgeEntityBase):
     private_attribute_entity_type_name: Literal["Edge"] = pd.Field("Edge", frozen=True)
     private_attribute_tag_key: Optional[str] = pd.Field(
         None,
-        description="The tag/attribute string used to gourp geometry edges to form this `Edge`.",
+        description="The tag/attribute string used to group geometry edges to form this `Edge`.",
     )
     private_attribute_sub_components: Optional[List[str]] = pd.Field(
         [], description="The edge ids in geometry that composed into this `Edge`."
@@ -264,16 +264,24 @@ class Box(MultiConstructorBaseModel, _VolumeEntityBase):
     """
 
     type_name: Literal["Box"] = pd.Field("Box", frozen=True)
-    private_attribute_entity_type_name: Literal["Box"] = pd.Field("Box", frozen=True)
     # pylint: disable=no-member
     center: LengthType.Point = pd.Field(description="The coordinates of the center of the box.")
     size: LengthType.PositiveVector = pd.Field(
         description="The dimensions of the box (length, width, height)."
     )
-    axis_of_rotation: Axis = pd.Field(default=(0, 0, 1), description="The rotation axis.")
-    angle_of_rotation: AngleType = pd.Field(default=0 * u.degree, description="The rotation angle.")
-    private_attribute_input_cache: BoxCache = pd.Field(BoxCache(), frozen=True)
+    axis_of_rotation: Axis = pd.Field(
+        default=(0, 0, 1),
+        description="The rotation axis. Cannot change once specified.",
+        frozen=True,
+    )
+    angle_of_rotation: AngleType = pd.Field(
+        default=0 * u.degree,
+        description="The rotation angle. Cannot change once specified.",
+        frozen=True,
+    )
     private_attribute_id: str = pd.Field(default_factory=generate_uuid, frozen=True)
+    private_attribute_input_cache: BoxCache = pd.Field(BoxCache(), frozen=True)
+    private_attribute_entity_type_name: Literal["Box"] = pd.Field("Box", frozen=True)
 
     # pylint: disable=no-self-argument
     @MultiConstructorBaseModel.model_constructor
@@ -344,6 +352,12 @@ class Box(MultiConstructorBaseModel, _VolumeEntityBase):
         """Return the axes that the box is aligned with."""
         return self.private_attribute_input_cache.axes
 
+    @pd.field_validator("center", "size", mode="after")
+    @classmethod
+    def _update_input_cache(cls, value, info: pd.ValidationInfo):
+        setattr(info.data["private_attribute_input_cache"], info.field_name, value)
+        return value
+
 
 @final
 class Cylinder(_VolumeEntityBase):
@@ -386,7 +400,7 @@ class Cylinder(_VolumeEntityBase):
 @final
 class Surface(_SurfaceEntityBase):
     """
-    :class:`Surface` represents a boudary surface in three-dimensional space.
+    :class:`Surface` represents a boundary surface in three-dimensional space.
     """
 
     private_attribute_entity_type_name: Literal["Surface"] = pd.Field("Surface", frozen=True)
@@ -398,7 +412,7 @@ class Surface(_SurfaceEntityBase):
     )
     private_attribute_tag_key: Optional[str] = pd.Field(
         None,
-        description="The tag/attribute string used to gourp geometry faces to form this `Surface`.",
+        description="The tag/attribute string used to group geometry faces to form this `Surface`.",
     )
     private_attribute_sub_components: Optional[List[str]] = pd.Field(
         [], description="The face ids in geometry that composed into this `Surface`."
@@ -410,7 +424,7 @@ class Surface(_SurfaceEntityBase):
 
 class GhostSurface(_SurfaceEntityBase):
     """
-    Represents a boudary surface that may or may not be generated therefore may or may not exist.
+    Represents a boundary surface that may or may not be generated therefore may or may not exist.
     It depends on the submitted geometry/Surface mesh. E.g. the symmetry plane in `AutomatedFarfield`.
 
     For now we do not use metadata or any other information to validate (on the client side) whether the surface
