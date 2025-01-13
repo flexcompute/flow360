@@ -5,7 +5,7 @@
 # ProjectMeta instances as FieldInfo, I'd rather not have this line
 import json
 from enum import Enum
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Literal, Optional, Union
 
 import pydantic as pd
 
@@ -16,10 +16,14 @@ from flow360.component.geometry import Geometry
 from flow360.component.interfaces import (
     GeometryInterface,
     ProjectInterface,
+    SurfaceMeshInterfaceV2,
     VolumeMeshInterfaceV2,
 )
 from flow360.component.resource_base import Flow360Resource
 from flow360.component.simulation.entity_info import GeometryEntityInfo
+from flow360.component.simulation.framework.single_attribute_base import (
+    SingleAttributeModel,
+)
 from flow360.component.simulation.outputs.output_entities import (
     Point,
     PointArray,
@@ -31,7 +35,7 @@ from flow360.component.simulation.unit_system import LengthType
 from flow360.component.simulation.utils import model_attribute_unlock
 from flow360.component.simulation.web.asset_base import AssetBase
 from flow360.component.simulation.web.draft import Draft
-from flow360.component.surface_mesh import SurfaceMesh
+from flow360.component.surface_mesh_v2 import SurfaceMeshV2
 from flow360.component.utils import (
     SUPPORTED_GEOMETRY_FILE_PATTERNS,
     MeshNameParser,
@@ -91,6 +95,68 @@ def _set_up_param_entity_info(entity_info, params: SimulationParams):
     return entity_info
 
 
+class GeometryFiles(SingleAttributeModel):
+    """Validation model to check if the given files are geometry files"""
+
+    type_name: Literal["GeometryFile"] = pd.Field("GeometryFile", frozen=True)
+    value: Union[List[str], str] = pd.Field()
+
+    @pd.field_validator("value", mode="after")
+    @classmethod
+    def _validate_files(cls, value):
+        if isinstance(value, str):
+            if not match_file_pattern(SUPPORTED_GEOMETRY_FILE_PATTERNS, value):
+                raise ValueError(
+                    f"The given file: {value} is not a supported geometry file. "
+                    f"Allowed file suffixes are: {SUPPORTED_GEOMETRY_FILE_PATTERNS}"
+                )
+        else:  # list
+            for file in value:
+                if not match_file_pattern(SUPPORTED_GEOMETRY_FILE_PATTERNS, file):
+                    raise ValueError(
+                        f"The given file: {file} is not a supported geometry file. "
+                        f"Allowed file suffixes are: {SUPPORTED_GEOMETRY_FILE_PATTERNS}"
+                    )
+        return value
+
+
+class SurfaceMeshFile(SingleAttributeModel):
+    """Validation model to check if the given file is a surface mesh file"""
+
+    type_name: Literal["SurfaceMeshFile"] = pd.Field("SurfaceMeshFile", frozen=True)
+    value: str = pd.Field()
+
+    @pd.field_validator("value", mode="after")
+    @classmethod
+    def _validate_files(cls, value):
+        try:
+            parser = MeshNameParser(input_mesh_file=value)
+        except Exception as e:
+            raise ValueError(str(e)) from e
+        if parser.is_valid_surface_mesh() or parser.is_valid_volume_mesh():
+            # We support extracting surface mesh from volume mesh as well
+            return value
+        raise ValueError(f"The given mesh file {value} is not a valid surface mesh file.")
+
+
+class VolumeMeshFile(SingleAttributeModel):
+    """Validation model to check if the given file is a volume mesh file"""
+
+    type_name: Literal["VolumeMeshFile"] = pd.Field("VolumeMeshFile", frozen=True)
+    value: str = pd.Field()
+
+    @pd.field_validator("value", mode="after")
+    @classmethod
+    def _validate_files(cls, value):
+        try:
+            parser = MeshNameParser(input_mesh_file=value)
+        except Exception as e:
+            raise ValueError(str(e)) from e
+        if parser.is_valid_volume_mesh():
+            return value
+        raise ValueError(f"The given mesh file {value} is not a valid volume mesh file.")
+
+
 class RootType(Enum):
     """
     Enum for root object types in the project.
@@ -99,11 +165,14 @@ class RootType(Enum):
     ----------
     GEOMETRY : str
         Represents a geometry root object.
+    SURFACE_MESH : str
+        Represents a surface mesh root object.
     VOLUME_MESH : str
         Represents a volume mesh root object.
     """
 
     GEOMETRY = "Geometry"
+    SURFACE_MESH = "SurfaceMesh"
     VOLUME_MESH = "VolumeMesh"
 
 
@@ -122,7 +191,7 @@ class ProjectMeta(pd.BaseModel, extra="allow"):
     root_item_id : str
         ID of the root item in the project.
     root_item_type : RootType
-        Type of the root item (Geometry or VolumeMesh).
+        Type of the root item (Geometry or SurfaceMesh or VolumeMesh).
     """
 
     user_id: str = pd.Field(alias="userId")
@@ -132,7 +201,7 @@ class ProjectMeta(pd.BaseModel, extra="allow"):
     root_item_type: RootType = pd.Field(alias="rootItemType")
 
 
-_SurfaceMeshCache = ProjectAssetCache[SurfaceMesh]
+_SurfaceMeshCache = ProjectAssetCache[SurfaceMeshV2]
 _VolumeMeshCache = ProjectAssetCache[VolumeMeshV2]
 _CaseCache = ProjectAssetCache[Case]
 
@@ -152,7 +221,7 @@ class Project(pd.BaseModel):
     metadata: ProjectMeta = pd.Field()
     solver_version: str = pd.Field(frozen=True)
 
-    _root_asset: Union[Geometry, VolumeMeshV2] = pd.PrivateAttr(None)
+    _root_asset: Union[Geometry, SurfaceMeshV2, VolumeMeshV2] = pd.PrivateAttr(None)
 
     _volume_mesh_cache: _VolumeMeshCache = pd.PrivateAttr(_VolumeMeshCache())
     _surface_mesh_cache: _SurfaceMeshCache = pd.PrivateAttr(_SurfaceMeshCache())
@@ -197,7 +266,7 @@ class Project(pd.BaseModel):
 
         return self._root_asset
 
-    def get_surface_mesh(self, asset_id: str = None) -> SurfaceMesh:
+    def get_surface_mesh(self, asset_id: str = None) -> SurfaceMeshV2:
         """
         Returns the surface mesh asset of the project.
 
@@ -214,14 +283,18 @@ class Project(pd.BaseModel):
 
         Returns
         -------
-        SurfaceMesh
+        SurfaceMeshV2
             The surface mesh asset.
         """
         self._check_initialized()
-        if self.metadata.root_item_type is not RootType.GEOMETRY:
-            raise Flow360ValueError(
-                "Surface mesh assets are only present in projects initialized from geometry."
-            )
+        if self.metadata.root_item_type is RootType.SURFACE_MESH:
+            if asset_id is not None:
+                raise Flow360ValueError(
+                    "Cannot retrieve surface meshes by asset ID in a project created from surface mesh, "
+                    "there is only one root surface mesh asset in this project. Use project.surface_mesh()."
+                )
+
+            return self._root_asset
 
         return self._surface_mesh_cache.get_asset(asset_id)
 
@@ -340,9 +413,10 @@ class Project(pd.BaseModel):
         Iterable[str]
             An iterable of asset IDs.
         """
-        if self.metadata.root_item_type is not RootType.GEOMETRY:
+        if self.metadata.root_item_type is RootType.SURFACE_MESH:
             raise Flow360ValueError(
-                "Surface mesh assets are only present in objects initialized from geometry."
+                "Cannot retrieve surface meshes by asset ID in a project created from surface mesh, "
+                "there is only one root surface mesh asset in this project. Use project.surface_mesh."
             )
 
         return self._surface_mesh_cache.get_ids()
@@ -376,47 +450,65 @@ class Project(pd.BaseModel):
         return self._case_cache.get_ids()
 
     @classmethod
-    def _detect_asset_type_from_file(cls, file):
+    def _detect_asset_type_from_file(
+        cls, files
+    ) -> Union[GeometryFiles, SurfaceMeshFile, VolumeMeshFile, None]:
         """
         Detects the asset type of a file based on its name or pattern.
 
         Parameters
         ----------
-        file : str
+        file : str or list of str
             The file name or path.
 
         Returns
         -------
         RootType
-            The detected root type (Geometry or VolumeMesh).
+            The detected file type.
 
         Raises
         ------
         Flow360FileError
-            If the file does not match any known patterns.
         """
-        if match_file_pattern(SUPPORTED_GEOMETRY_FILE_PATTERNS, file):
-            return RootType.GEOMETRY
-        try:
-            parser = MeshNameParser(file)
-            if parser.is_valid_volume_mesh():
-                return RootType.VOLUME_MESH
-        except Flow360FileError:
-            pass
+        validated_objects = []
+        errors = [None, None, None]
 
-        raise Flow360FileError(
-            f"{file} is not a geometry or volume mesh file required for project initialization. "
-            "Accepted formats are: "
-            f"{SUPPORTED_GEOMETRY_FILE_PATTERNS} (geometry)"
-            f"{MeshNameParser.all_patterns(mesh_type='volume')} (volume mesh)"
-        )
+        for model in [GeometryFiles, SurfaceMeshFile, VolumeMeshFile]:
+            try:
+                validated_objects.append(model(value=files))
+            except pd.ValidationError as e:
+                validated_objects.append(None)
+                errors.append(e)
+
+        if validated_objects == [None, None, None]:
+            raise Flow360FileError(
+                f"The given file/s: {files} cannot be recognized as"
+                "geometry or surface mesh or volume mesh file."
+                f"\nGeometry file error: {errors[0]}"
+                f"\nSurfaceMesh file error: {errors[1]}"
+                f"\nVolumeMesh file error: {errors[2]}"
+            )
+
+        # Checking if the file is both a volume mesh and a surface mesh file:
+        if validated_objects[1] and validated_objects[2]:
+            raise Flow360FileError(
+                f"The given file: {files} may be recoginized as both volume mesh and surface mesh input."
+                f" Please use `SurfaceMeshFile('{files}')` or `VolumeMeshFile('{files}')` to be specific."
+            )
+        if sum(item is not None for item in validated_objects) > 1:
+            raise Flow360FileError(
+                f"[Internal error]: More than one file type recognized ({files})."
+            )
+
+        return next((item for item in validated_objects if item is not None), None)
 
     # pylint: disable=too-many-arguments
     @classmethod
     @pd.validate_call
     def from_file(
         cls,
-        file: str = None,
+        *,
+        files: Union[GeometryFiles, SurfaceMeshFile, VolumeMeshFile, str, list[str]],
         name: str = None,
         solver_version: str = __solver_version__,
         length_unit: LengthUnitType = "m",
@@ -449,15 +541,32 @@ class Project(pd.BaseModel):
             If the project cannot be initialized from the file.
         """
         root_asset = None
-        root_type = cls._detect_asset_type_from_file(file)
-        if root_type == RootType.GEOMETRY:
-            draft = Geometry.from_file(file, name, solver_version, length_unit, tags)
-            root_asset = draft.submit()
-        elif root_type == RootType.VOLUME_MESH:
-            draft = VolumeMeshV2.from_file(file, name, solver_version, length_unit, tags)
-            root_asset = draft.submit()
+        if isinstance(files, (GeometryFiles, SurfaceMeshFile, VolumeMeshFile)):
+            validated_files = files
+        else:
+            validated_files = Project._detect_asset_type_from_file(files)
+
+        if isinstance(validated_files, GeometryFiles):
+            draft = Geometry.from_file(
+                validated_files.value, name, solver_version, length_unit, tags
+            )
+        elif isinstance(validated_files, SurfaceMeshFile):
+            draft = SurfaceMeshV2.from_file(
+                validated_files.value, name, solver_version, length_unit, tags
+            )
+        elif isinstance(validated_files, VolumeMeshFile):
+            draft = VolumeMeshV2.from_file(
+                validated_files.value, name, solver_version, length_unit, tags
+            )
+        else:
+            raise Flow360FileError(
+                "Cannot detect the intended project root with the given file(s)."
+            )
+
+        root_asset = draft.submit()
+
         if not root_asset:
-            raise Flow360ValueError(f"Couldn't initialize asset from {file}")
+            raise Flow360ValueError(f"Couldn't initialize asset from {validated_files.value}")
         project_id = root_asset.project_id
         project_api = RestApi(ProjectInterface.endpoint, id=project_id)
         info = project_api.get()
@@ -465,12 +574,13 @@ class Project(pd.BaseModel):
             raise Flow360ValueError(f"Couldn't retrieve project info for {project_id}")
         project = Project(metadata=ProjectMeta(**info), solver_version=root_asset.solver_version)
         project._project_webapi = project_api
-        if root_type == RootType.GEOMETRY:
-            project._root_asset = root_asset
+        if isinstance(validated_files, GeometryFiles):
             project._root_webapi = RestApi(GeometryInterface.endpoint, id=root_asset.id)
-        elif root_type == RootType.VOLUME_MESH:
-            project._root_asset = root_asset
+        elif isinstance(validated_files, SurfaceMeshFile):
+            project._root_webapi = RestApi(SurfaceMeshInterfaceV2.endpoint, id=root_asset.id)
+        elif isinstance(validated_files, VolumeMeshFile):
             project._root_webapi = RestApi(VolumeMeshInterfaceV2.endpoint, id=root_asset.id)
+        project._root_asset = root_asset
         project._get_root_simulation_json()
         return project
 
@@ -508,6 +618,8 @@ class Project(pd.BaseModel):
         root_type = meta.root_item_type
         if root_type == RootType.GEOMETRY:
             root_asset = Geometry.from_cloud(meta.root_item_id)
+        elif root_type == RootType.SURFACE_MESH:
+            root_asset = SurfaceMeshV2.from_cloud(meta.root_item_id)
         elif root_type == RootType.VOLUME_MESH:
             root_asset = VolumeMeshV2.from_cloud(meta.root_item_id)
         if not root_asset:
@@ -517,6 +629,9 @@ class Project(pd.BaseModel):
         if root_type == RootType.GEOMETRY:
             project._root_asset = root_asset
             project._root_webapi = RestApi(GeometryInterface.endpoint, id=root_asset.id)
+        elif root_type == RootType.SURFACE_MESH:
+            project._root_asset = root_asset
+            project._root_webapi = RestApi(SurfaceMeshInterfaceV2.endpoint, id=root_asset.id)
         elif root_type == RootType.VOLUME_MESH:
             project._root_asset = root_asset
             project._root_webapi = RestApi(VolumeMeshInterfaceV2.endpoint, id=root_asset.id)
@@ -632,6 +747,7 @@ class Project(pd.BaseModel):
         with model_attribute_unlock(params.private_attribute_asset_cache, "project_entity_info"):
             params.private_attribute_asset_cache.project_entity_info = entity_info
 
+        params.to_file("simulation_DEBUG.json")
         draft.update_simulation_params(params)
 
         destination_id = draft.run_up_to_target_asset(target, use_beta_mesher=use_beta_mesher)
@@ -644,7 +760,7 @@ class Project(pd.BaseModel):
             }
         )
 
-        if target is SurfaceMesh or target is VolumeMeshV2:
+        if target is SurfaceMeshV2 or target is VolumeMeshV2:
             # Intermediate asset and we should enforce it to contain the entity info from root item.
             # pylint: disable=protected-access
             destination_obj = target.from_cloud(
@@ -694,7 +810,7 @@ class Project(pd.BaseModel):
         self._surface_mesh_cache.add_asset(
             self._run(
                 params=params,
-                target=SurfaceMesh,
+                target=SurfaceMeshV2,
                 draft_name=name,
                 run_async=run_async,
                 fork_from=None,
@@ -732,9 +848,12 @@ class Project(pd.BaseModel):
             If the root item type is not Geometry.
         """
         self._check_initialized()
-        if self.metadata.root_item_type is not RootType.GEOMETRY:
+        if (
+            self.metadata.root_item_type is not RootType.GEOMETRY
+            and self.metadata.root_item_type is not RootType.SURFACE_MESH
+        ):
             raise Flow360ValueError(
-                "Volume mesher can only be run by projects with a geometry root asset"
+                "Volume mesher can only be run by projects with a geometry or surface mesh root asset"
             )
         self._volume_mesh_cache.add_asset(
             self._run(

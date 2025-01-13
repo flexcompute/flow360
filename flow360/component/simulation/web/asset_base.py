@@ -51,7 +51,7 @@ class AssetBase(metaclass=ABCMeta):
         resp = self._webapi.get()
         project_id = resp["projectId"]
         solver_version = resp["solverVersion"]
-        self.project_id: str = project_id
+        self._project_id: str = project_id
         self.solver_version: str = solver_version
 
     @classmethod
@@ -127,6 +127,11 @@ class AssetBase(metaclass=ABCMeta):
     def entity_info(self):
         """Return the entity info associated with the asset (copy to prevent unintentional overwrites)"""
         return self._entity_info_class.model_validate(self._entity_info.model_dump())
+
+    @property
+    def project_id(self):
+        """Return the project id of the asset"""
+        return self._project_id
 
     @classmethod
     def _interface(cls):
