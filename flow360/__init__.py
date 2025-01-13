@@ -73,6 +73,8 @@ from flow360.component.simulation.models.volume_models import (
     BETDiskChord,
     BETDiskSectionalPolar,
     BETDiskTwist,
+    C81File,
+    DFDCFile,
     Fluid,
     ForcePerArea,
     FromUserDefinedDynamics,
@@ -81,6 +83,8 @@ from flow360.component.simulation.models.volume_models import (
     PorousMedium,
     Rotation,
     Solid,
+    XFOILFile,
+    XROTORFile,
 )
 from flow360.component.simulation.operating_condition.operating_condition import (
     AerospaceCondition,
@@ -235,6 +239,10 @@ __all__ = [
     "VolumeMesh",
     "UserDefinedFarfield",
     "Geometry",
+    "XROTORFile",
+    "DFDCFile",
+    "C81File",
+    "XFOILFile",
     "TimeAverageProbeOutput",
     "TimeAverageSurfaceProbeOutput",
     "SurfaceSliceOutput",
