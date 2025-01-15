@@ -6,6 +6,7 @@ Case component
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from typing import Any, Iterator, List, Optional, Union
 
@@ -385,7 +386,7 @@ class CaseDraft(CaseBase, ResourceDraft):
         )
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes,too-many-public-methods
 class Case(CaseBase, Flow360Resource):
     """
     Case component
@@ -405,7 +406,6 @@ class Case(CaseBase, Flow360Resource):
         self._params = None
         self._raw_params = None
         self._results = CaseResultsModel(case=self)
-        self._manifest = None
 
     @classmethod
     def _from_meta(cls, meta: CaseMeta):
@@ -418,28 +418,25 @@ class Case(CaseBase, Flow360Resource):
         """
         returns simulation params
         """
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as temp_file:
-            try:
-                self._download_file("simulation.json", to_file=temp_file.name, log_error=False)
-            except CloudFileNotFoundError as err:
-                raise Flow360ValueError(
-                    "Simulation params not found for this case. It is likely it was created with old interface"
-                ) from err
 
-            # if the params come from GUI, it can contain data that is not conformal with SimulationParams thus cleaning
-            with open(temp_file.name, "r", encoding="utf-8") as fh:
-                params_as_dict: dict = json.load(fh)
+        try:
+            params_as_dict = self._parse_json_from_cloud("simulation.json")
+        except CloudFileNotFoundError as err:
+            raise Flow360ValueError(
+                "Simulation params not found for this case. It is likely it was created with old interface"
+            ) from err
 
-            param, errors, _ = services.validate_model(
-                params_as_dict=params_as_dict, root_item_type=None, validation_level=None
+        # if the params come from GUI, it can contain data that is not conformal with SimulationParams thus cleaning
+        param, errors, _ = services.validate_model(
+            params_as_dict=params_as_dict, root_item_type=None, treat_as_file=True
+        )
+
+        if errors is not None:
+            raise Flow360ValidationError(
+                f"Error found in simulation params. The param may be created by an incompatible version. {errors}",
             )
 
-            if errors is not None:
-                raise Flow360ValidationError(
-                    f"Error found in simulation params. The param may be created by an incompatible version. {errors}",
-                )
-
-            return param
+        return param
 
     @property
     def params(self) -> Union[Flow360Params, SimulationParams]:
@@ -509,6 +506,19 @@ class Case(CaseBase, Flow360Resource):
         returns metadata info for case
         """
         return super().info
+
+    @property
+    def volume_mesh(self) -> "VolumeMeshV2":
+        """
+        returns volume mesh
+        """
+        from_cache = self.local_resource_cache[self.volume_mesh_id]
+        if from_cache is not None:
+            return from_cache
+        # pylint: disable=import-outside-toplevel,cyclic-import
+        from .volume_mesh import VolumeMeshV2
+
+        return VolumeMeshV2(self.volume_mesh_id)
 
     @property
     def volume_mesh_id(self):
@@ -640,20 +650,22 @@ class Case(CaseBase, Flow360Resource):
         return cls(case_id)
 
     @classmethod
-    def from_local_storage(cls, id, name, local_storage_path, user_id: str = "local") -> Case:
+    def from_local_storage(cls, local_storage_path, meta_data: CaseMeta) -> Case:
         """
         Create a `Case` instance from local storage.
 
         Parameters
         ----------
-        id : str
-            The unique identifier for the case.
-        name : str
-            The name of the case.
         local_storage_path : str
             The path to the local storage directory.
-        user_id : str, optional
-            The user ID associated with the case, by default "local".
+        meta_data : CaseMeta
+            case metadata such as:
+            id : str
+                The unique identifier for the case.
+            name : str
+                The name of the case.
+            user_id : str
+                The user ID associated with the case, can be "local".
 
         Returns
         -------
@@ -661,19 +673,10 @@ class Case(CaseBase, Flow360Resource):
             An instance of `Case` with data loaded from local storage.
         """
         _local_download_file = _local_download_overwrite(local_storage_path, cls.__name__)
-        # we don't know if the status is completed, but if we load from local, we can assume
-        case = cls._from_meta(
-            CaseMeta(
-                caseId=id,
-                name=name,
-                status=Flow360Status.COMPLETED,
-                userId=user_id,
-                deleted=False,
-                caseMeshId="unknown",
-            )
-        )
+        case = cls._from_meta(meta_data)
         case._download_file = _local_download_file
-        case._results = CaseResultsModel(case=case, local_storage=local_storage_path)
+        case._results = CaseResultsModel(case=case)
+        case.results.set_local_storage(local_storage_path, keep_remote_structure=True)
         return case
 
     # pylint: disable=too-many-arguments
@@ -1010,6 +1013,28 @@ class CaseResultsModel(pd.BaseModel):
         return self.case._download_file(
             file_name=file_name, to_file=to_file, to_folder=to_folder, overwrite=overwrite
         )
+
+    def set_local_storage(self, local_storage: str, keep_remote_structure: bool = False):
+        """
+        Set local storage for fetching data from. Used with Case.from_local_storage(...)
+
+        Parameters
+        ----------
+        local_storage : str
+            Path to local folder
+        keep_remote_structure : bool, optional
+            When true, remote folder structure is assumed to be preseved, otherwise flat structure, by default False
+        """
+        for field_name in self.model_fields:
+            value = getattr(self, field_name)
+            if isinstance(value, ResultBaseModel):
+                if keep_remote_structure is True:
+                    # pylint: disable=protected-access,no-member
+                    value.local_storage = os.path.dirname(
+                        os.path.join(local_storage, value._remote_path())
+                    )
+                else:
+                    value.local_storage = local_storage
 
 
 class CaseList(Flow360ResourceListBase):

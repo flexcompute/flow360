@@ -4,22 +4,28 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import time
 from abc import ABCMeta
 from typing import List, Union
 
 from flow360.cloud.flow360_requests import LengthUnitType
 from flow360.cloud.rest_api import RestApi
-from flow360.cloud.s3_utils import get_local_filename_and_create_folders
 from flow360.component.interfaces import BaseInterface, ProjectInterface
 from flow360.component.resource_base import (
     AssetMetaBaseModel,
+    AssetMetaBaseModelV2,
     Flow360Resource,
     ResourceDraft,
 )
-from flow360.component.simulation.entity_info import EntityInfoModel
-from flow360.component.utils import remove_properties_by_name, validate_type
+from flow360.component.simulation.entity_info import (
+    EntityInfoModel,
+    parse_entity_info_model,
+)
+from flow360.component.utils import (
+    _local_download_overwrite,
+    remove_properties_by_name,
+    validate_type,
+)
 from flow360.log import log
 
 
@@ -47,12 +53,20 @@ class AssetBase(metaclass=ABCMeta):
             meta_class=self._meta_class,
             id=id,
         )
-        # get the project id according to resource id
-        resp = self._webapi.get()
-        project_id = resp["projectId"]
-        solver_version = resp["solverVersion"]
-        self.project_id: str = project_id
-        self.solver_version: str = solver_version
+
+    @property
+    def project_id(self):
+        """
+        get project ID
+        """
+        return self.info.project_id
+
+    @property
+    def solver_version(self):
+        """
+        get solver version
+        """
+        return self.info.solver_version
 
     @classmethod
     # pylint: disable=protected-access
@@ -71,12 +85,18 @@ class AssetBase(metaclass=ABCMeta):
         """
         return self._webapi.short_description()
 
+    @property
+    def name(self):
+        """
+        returns name of resource
+        """
+        return self.info.name
+
     @classmethod
     def _from_supplied_entity_info(
         cls,
         simulation_dict: dict,
         asset_obj,
-        root_item_entity_info_type: Union[None, type[EntityInfoModel]],
     ):
         if "private_attribute_asset_cache" not in simulation_dict:
             raise KeyError(
@@ -95,10 +115,7 @@ class AssetBase(metaclass=ABCMeta):
         # Note: This should be addressed when we design the new project client interface.
         remove_properties_by_name(entity_info, "_id")
         # pylint: disable=protected-access
-        if root_item_entity_info_type is None:
-            asset_obj._entity_info = cls._entity_info_class.model_validate(entity_info)
-        else:
-            asset_obj._entity_info = root_item_entity_info_type.model_validate(entity_info)
+        asset_obj._entity_info = parse_entity_info_model(entity_info)
         return asset_obj
 
     @classmethod
@@ -136,8 +153,18 @@ class AssetBase(metaclass=ABCMeta):
     def _meta_class(cls):
         return cls._meta_class
 
+    def get_download_file_list(self) -> List:
+        """return list of files available for download
+
+        Returns
+        -------
+        List
+            List of files available for download
+        """
+        return self._webapi.get_download_file_list()
+
     @classmethod
-    def from_cloud(cls, id: str, **kwargs):
+    def from_cloud(cls, id: str, **_):
         """
         Create asset with the given ID.
 
@@ -145,12 +172,9 @@ class AssetBase(metaclass=ABCMeta):
         is not the project root asset and should store the given entity info type instead
         """
         asset_obj = cls(id)
-        root_item_entity_info_type = kwargs.get("root_item_entity_info_type", None)
         # populating the entityInfo object
         simulation_dict = cls._get_simulation_json(asset_obj)
-        asset_obj = cls._from_supplied_entity_info(
-            simulation_dict, asset_obj, root_item_entity_info_type
-        )
+        asset_obj = cls._from_supplied_entity_info(simulation_dict, asset_obj)
         return asset_obj
 
     @classmethod
@@ -180,7 +204,9 @@ class AssetBase(metaclass=ABCMeta):
         )
 
     @classmethod
-    def _from_local_storage(cls, asset_id: str = None, local_storage_path=""):
+    def _from_local_storage(
+        cls, asset_id: str = None, local_storage_path="", meta_data: AssetMetaBaseModelV2 = None
+    ):
         """
         Create asset from local storage
         :param asset_id: ID of the asset
@@ -188,27 +214,15 @@ class AssetBase(metaclass=ABCMeta):
         :return: asset object
         """
 
-        # pylint: disable=not-callable
-        def _local_download_file(
-            file_name: str,
-            to_file: str = None,
-            to_folder: str = ".",
-        ):
-            expected_local_file = os.path.join(local_storage_path, file_name)
-            if not os.path.exists(expected_local_file):
-                raise RuntimeError(
-                    f"File {expected_local_file} not found. Make sure the file exists when using "
-                    + "VolumeMeshV2.from_local_storage()."
-                )
-            new_local_file = get_local_filename_and_create_folders(file_name, to_file, to_folder)
-            if new_local_file != expected_local_file:
-                shutil.copy(expected_local_file, new_local_file)
-
+        _local_download_file = _local_download_overwrite(local_storage_path, cls.__name__)
         _local_download_file(file_name="simulation.json", to_folder=local_storage_path)
         with open(os.path.join(local_storage_path, "simulation.json"), encoding="utf-8") as f:
             params_dict = json.load(f)
 
-        asset_obj = cls._from_supplied_entity_info(params_dict, cls(asset_id), None)
+        asset_obj = cls._from_supplied_entity_info(params_dict, cls(asset_id))
+        asset_obj._webapi._download_file = _local_download_file  # pylint: disable=protected-access
+        if meta_data is not None:
+            asset_obj._webapi._set_meta(meta_data)  # pylint: disable=protected-access
         return asset_obj
 
     def wait(self, timeout_minutes=60):

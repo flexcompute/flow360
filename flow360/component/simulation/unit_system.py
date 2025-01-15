@@ -19,6 +19,7 @@ import unyt as u
 import unyt.dimensions as udim
 from pydantic import PlainSerializer
 from pydantic_core import InitErrorDetails, core_schema
+from unyt import unyt_quantity  # pylint: disable=unused-import
 
 from flow360.log import log
 from flow360.utils import classproperty
@@ -857,6 +858,33 @@ class _FrequencyType(_DimensionedType):
 
 
 FrequencyType = Annotated[_FrequencyType, PlainSerializer(_dimensioned_type_serializer)]
+
+
+DimensionedTypes = Union[
+    LengthType,
+    AngleType,
+    MassType,
+    TimeType,
+    TemperatureType,
+    VelocityType,
+    AreaType,
+    ForceType,
+    PressureType,
+    DensityType,
+    ViscosityType,
+    PowerType,
+    MomentType,
+    AngularVelocityType,
+    HeatFluxType,
+    HeatSourceType,
+    SpecificHeatCapacityType,
+    ThermalConductivityType,
+    InverseAreaType,
+    InverseLengthType,
+    MassFlowRateType,
+    SpecificEnergyType,
+    FrequencyType,
+]
 
 
 def _iterable(obj):

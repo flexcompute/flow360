@@ -2,6 +2,7 @@
 Flow360 base Model
 """
 
+import json
 import os
 import re
 import shutil
@@ -11,7 +12,7 @@ from abc import ABCMeta
 from datetime import datetime
 from enum import Enum
 from functools import wraps
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import List, Optional, Union
 
 import pydantic as pd_v2
@@ -21,7 +22,7 @@ from flow360 import error_messages
 from flow360.cloud.rest_api import RestApi
 from flow360.cloud.webbrowser import open_browser
 from flow360.component.interfaces import BaseInterface
-from flow360.component.utils import is_valid_uuid, validate_type
+from flow360.component.utils import LocalResourceCache, is_valid_uuid, validate_type
 from flow360.exceptions import Flow360RuntimeError
 from flow360.log import LogLevel, log
 
@@ -47,6 +48,8 @@ class Flow360Status(Enum):
     DELETED = "deleted"
     PENDING = "pending"
     UNKNOWN = "unknown"
+    SUBMITTED = "submitted"
+    QUEUED = "queued"
 
     def is_final(self):
         """Checks if status is final
@@ -82,7 +85,8 @@ class AssetMetaBaseModel(pd.BaseModel):
     created_at: Optional[str] = pd.Field(alias="createdAt")
     updated_at: Optional[datetime] = pd.Field(alias="updatedAt")
     updated_by: Optional[str] = pd.Field(alias="updatedBy")
-    deleted: bool
+    deleted: Optional[bool]
+    cloud_path_prefix: Optional[str] = None
 
     # pylint: disable=no-self-argument
     @pd.validator("*", pre=True)
@@ -122,13 +126,16 @@ class AssetMetaBaseModelV2(pd_v2.BaseModel):
     name: str = pd_v2.Field()
     user_id: str = pd_v2.Field(alias="userId")
     id: str = pd_v2.Field()
-    solver_version: str = pd_v2.Field(alias="solverVersion")
+    solver_version: Optional[str] = pd_v2.Field(None, alias="solverVersion")
+    project_id: Optional[str] = pd_v2.Field(None, alias="projectId")
+    parent_id: Optional[str] = pd_v2.Field(None, alias="parentId")
     status: Flow360Status = pd_v2.Field()
-    tags: List[str] = pd_v2.Field([])
-    created_at: str = pd_v2.Field(alias="createdAt")
-    updated_at: datetime = pd_v2.Field(alias="updatedAt")
+    tags: Optional[List[str]] = pd_v2.Field([])
+    created_at: Optional[str] = pd_v2.Field(None, alias="createdAt")
+    updated_at: Optional[datetime] = pd_v2.Field(None, alias="updatedAt")
     updated_by: Optional[str] = pd_v2.Field(None, alias="updatedBy")
-    deleted: bool = pd_v2.Field()
+    deleted: Optional[bool] = None
+    cloud_path_prefix: Optional[str] = None
 
     model_config = pd_v2.ConfigDict(extra="allow", frozen=True)
 
@@ -194,6 +201,7 @@ class Flow360Resource(RestApi):
         self.meta_class = meta_class
         self._info = None
         self.logs = RemoteResourceLogs(self)
+        self._local_resource_cache = LocalResourceCache()
         super().__init__(endpoint=interface.endpoint, id=id)
 
     def __str__(self):
@@ -305,6 +313,37 @@ class Flow360Resource(RestApi):
         """
         return self.get(method="files")
 
+    def get_cloud_path_prefix(self):
+        """
+        Retrieves the cloud path prefix for the resource.
+
+        If the `cloud_path_prefix` is already available in the resource's metadata, it is returned directly.
+        Otherwise, this method determines the prefix based on the associated files of the resource.
+
+        Returns
+        -------
+        str
+            The cloud path prefix for the resource.
+
+        Raises
+        ------
+        ValueError
+            If no files are associated with the resource, making it impossible to determine the cloud path prefix.
+        """
+        if self.info.cloud_path_prefix is not None:
+            return self.info.cloud_path_prefix
+        files = self.get_download_file_list()
+        if len(files) == 0:
+            raise ValueError(
+                "Cannot determine cloud path prefix. Not files accociated with this resource."
+            )
+        return self.s3_transfer_method.get_cloud_path_prefix(self.id, files[0]["fileName"])
+
+    @property
+    def local_resource_cache(self):
+        """local resource cache"""
+        return self._local_resource_cache
+
     # pylint: disable=too-many-arguments
     def _download_file(
         self,
@@ -349,6 +388,22 @@ class Flow360Resource(RestApi):
             progress_callback=progress_callback,
             **kwargs,
         )
+
+    def _parse_json_from_cloud(self, filename) -> dict:
+        """
+        returns simulation params
+        """
+        with NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+            temp_path = tmp_file.name
+        try:
+            self._download_file(filename, to_file=temp_path, log_error=False, verbose=False)
+            with open(temp_path, "r", encoding="utf-8") as fh:
+                data_as_dict = json.load(fh)
+            return data_as_dict
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     def _upload_file(self, remote_file_name: str, file_name: str, progress_callback=None):
         """
