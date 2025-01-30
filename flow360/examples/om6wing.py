@@ -9,6 +9,7 @@ class OM6wing(BaseTestCase):
     name = "om6wing"
 
     class url:
+        geometry = "https://simcloud-public-1.s3.amazonaws.com/om6QuickStartAutoMesh/om6wing.csm"
         mesh = "https://simcloud-public-1.s3.amazonaws.com/om6/wing_tetra.1.lb8.ugrid"
         mesh_json = "https://simcloud-public-1.s3.amazonaws.com/om6/Flow360Mesh.json"
         case_json = "local://flow360.json"

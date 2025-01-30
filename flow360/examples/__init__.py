@@ -6,6 +6,7 @@ from .convergence import Convergence
 from .cylinder2D import Cylinder2D
 from .cylinder3D import Cylinder3D
 from .monitors import MonitorsAndSlices
+from .nrel_s809 import NRELS809
 from .om6wing import OM6wing
 from .rotating_spheres import RotatingSpheres
 from .tutorial_2D_30p30n import Tutorial2D30p30n
@@ -28,6 +29,7 @@ __all__ = [
     "Cylinder2D",
     "Cylinder3D",
     "MonitorsAndSlices",
+    "NRELS809",
     "OM6wing",
     "RotatingSpheres",
     "Tutorial2DCRM",
