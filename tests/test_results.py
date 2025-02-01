@@ -282,6 +282,18 @@ def test_y_sectional_results(mock_id, mock_response):
     )
     assert set(y_slicing.values.keys()) == set(all_headers)
 
+    # make sure the data excluded in the previous filter operation can still be retrieved
+    y_slicing.filter(include="*fuselage*")
+    assert y_slicing.as_dataframe().iloc[-1]["totalCFz_per_span"] == 1.436235385808551646e-01
+
+    boundaries = ["fluid/fuselage"]
+    all_headers = (
+        [f"{prefix}_{postfix}" for prefix, postfix in product(boundaries, variables)]
+        + x_columns
+        + total
+    )
+    assert set(y_slicing.values.keys()) == set(all_headers)
+
     y_slicing.filter(exclude="*fuselage*")
     assert y_slicing.as_dataframe().iloc[-1]["totalCFx_per_span"] == -0.017427309558312547
 
