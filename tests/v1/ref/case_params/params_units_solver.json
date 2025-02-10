@@ -61,17 +61,7 @@
     "startAverageIntegrationStep": -1,
     "writeSingleFile": false,
     "outputFields": [],
-    "surfaces": {
-      "freestream": {
-        "outputFields": []
-      },
-      "symmetry": {
-        "outputFields": []
-      },
-      "wing": {
-        "outputFields": []
-      }
-    }
+    "surfaces": {}
   },
   "volumeZones": {
     "zone3": {

@@ -82,17 +82,7 @@
         "startAverageIntegrationStep": -1,
         "writeSingleFile": false,
         "outputFields": [],
-        "surfaces": {
-            "wing": {
-                "outputFields": []
-            },
-            "symmetry": {
-                "outputFields": []
-            },
-            "freestream": {
-                "outputFields": []
-            }
-        }
+        "surfaces":{}
     },
     "volumeZones": {
         "zone2": {
@@ -175,5 +165,5 @@
         "lowMachPreconditioner": false,
         "lowDissipationControlFactors": []
     },
-    "hash": "82908fc4236c28dc088adca744877cfb64b3049245a73a04cea22aa39d72c36c"
+    "hash": "485deb194f91439f97f185b5ddf4b229c78f922583eb355f756fa5af9e023424"
 }

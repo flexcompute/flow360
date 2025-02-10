@@ -230,10 +230,10 @@ class SurfaceOutput(Flow360BaseModel, TimeAverageAnimatedOutput):
             solver_values["surfaces"] = Surfaces()
         if solver_values["output_format"] == "both":
             solver_values["output_format"] = "paraview,tecplot"
-        for boundary_name in boundary_names:
-            if boundary_name not in solver_values["surfaces"].names():
-                solver_values["surfaces"][boundary_name] = Surface()
-                solver_values["surfaces"][boundary_name].output_fields = []
+        # for boundary_name in boundary_names:
+        #     if boundary_name not in solver_values["surfaces"].names():
+        #         solver_values["surfaces"][boundary_name] = Surface()
+        #         solver_values["surfaces"][boundary_name].output_fields = []
         _distribute_shared_output_fields(solver_values, "surfaces")
 
         return SurfaceOutput(**solver_values)
