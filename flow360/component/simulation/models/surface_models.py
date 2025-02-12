@@ -141,18 +141,17 @@ class Pressure(SingleAttributeModel):
 
 class SlaterPorousBleed(Flow360BaseModel):
     """
-    :class:`SlaterPorousBleed` class to specify the static pressure of the Slater porous
-    bleed model `Outflow` boundary condition via :py:attr:`Outflow.spec`. This model is
-    often used for supersonic porous bleed regions, and used a porosity and static
-    pressure ratio to control the flow out of a porous bleed region.
+    :class:`SlaterPorousBleed` is a no-slip wall model which prescribes a normal
+    velocity at the surface as a function of the surface pressure and density according
+    to the model of John Slater.
 
     Example
     -------
     - Specify a static pressure of 1.01e6 Pascals at the slater bleed boundary, and
       set the porosity of the surface to 0.4 (40%).
 
-    >>> fl.SlaterPorousBleed(static_pressure = 1.01e6 * fl.u.Pa,
-                             porosity = 0.4)
+    >>> fl.SlaterPorousBleeed(static_pressure = 1.01e6 * fl.u.Pa,
+    ...                          porosity = 0.4, activation_step = 200)
 
     ====
     """
@@ -161,6 +160,9 @@ class SlaterPorousBleed(Flow360BaseModel):
     # pylint: disable=no-member
     static_pressure: PressureType.Positive = pd.Field(description="The static pressure value.")
     porosity: float = pd.Field(gt=0, le=1, description="The porosity of the bleed region.")
+    activation_step: Optional[pd.PositiveInt] = pd.Field(
+        None, description="Pseudo step at which to start applying the SlaterPorousBleedModel."
+    )
 
 
 class MassFlowRate(Flow360BaseModel):
@@ -273,6 +275,16 @@ class Wall(BoundaryBase):
       ...     heat_spec=fl.HeatFlux(1.0 * fl.u.W/fl.u.m**2),
       ... )
 
+    - Define Slater no-slip bleed model on entities
+      with the naming pattern :code:`"fluid/SlaterBoundary-*"`:
+
+      >>> fl.Wall(
+      ...     entities=volume_mesh["fluid/SlaterBoundary-*"],
+      ...     wall_velocity_model = fl.SlaterPorousBleed(static_pressure = 1.01e6 * fl.u.Pa,
+      ...                                                porosity = 0.4,
+      ...                                                activation_step = 200)
+      ... )
+
     ====
     """
 
@@ -284,7 +296,7 @@ class Wall(BoundaryBase):
         + "close to the solid boundaries.",
     )
     velocity: Optional[VelocityVectorType] = pd.Field(
-        None, description="Prescribe a tangential velocity on the wall."
+        None, description="Prescribe a velocity on the wall."
     )
     # pylint: disable=no-member
     heat_spec: Union[HeatFlux, Temperature] = pd.Field(
@@ -295,6 +307,11 @@ class Wall(BoundaryBase):
     roughness_height: LengthType.NonNegative = pd.Field(
         0 * u.m,
         description="Equivalant sand grain roughness height. Available only to `Fluid` zone boundaries.",
+    )
+    wall_velocity_model: Optional[SlaterPorousBleed] = pd.Field(
+        None,
+        description="Specify a model to compute the local wall velocity. Currently only "
+        + " SlaterPorousBleed is supported.",
     )
 
 
@@ -367,23 +384,15 @@ class Outflow(BoundaryBase):
       ...     spec=fl.MassFlowRate(value = 123 * fl.u.lb / fl.u.s)
       ... )
 
-    - Define outflow boundary condition with Slater porous bleed model::
-
-      >>> fl.Outflow(
-      ...     surfaces=volume_mesh["fluid/bleed1"],
-      ...     spec=fl.SlaterPorousBleed(static_pressure = 0.99e6 * fl.u.Pa,
-      ...                               porosity = 0.4)
-      ... )
-
     ====
     """
 
     name: Optional[str] = pd.Field(None, description="Name of the `Outflow` boundary condition.")
     type: Literal["Outflow"] = pd.Field("Outflow", frozen=True)
-    spec: Union[Pressure, MassFlowRate, Mach, SlaterPorousBleed] = pd.Field(
+    spec: Union[Pressure, MassFlowRate, Mach] = pd.Field(
         discriminator="type_name",
-        description="Specify the static pressure, mass flow rate, Mach number, or "
-        + "SlaterPorousBleed parameters at the `Outflow` boundary.",
+        description="Specify the static pressure, mass flow rate, or Mach number parameters at"
+        + " the `Outflow` boundary.",
     )
 
 
