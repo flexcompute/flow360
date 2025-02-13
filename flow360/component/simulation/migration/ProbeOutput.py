@@ -8,7 +8,7 @@ from typing import List
 
 from pydantic import validate_call
 
-from flow360.component.simulation.outputs.output_entities import Point, PointGroup
+from flow360.component.simulation.outputs.output_entities import PointGroup
 from flow360.component.simulation.outputs.outputs import ProbeOutput
 from flow360.log import log
 
@@ -38,12 +38,10 @@ def read_all_v0_monitors(*, file_path: str, mesh_unit) -> List[ProbeOutput]:
         return monitor_list
 
     flow360_monitor_dict = data_dict["monitorOutput"]["monitors"]
-    point_idx = 0
 
     for monitor_group_name, group_settings in flow360_monitor_dict.items():
         if group_settings["type"] != "probe":
             continue
-        entities = []
 
         if not group_settings.get("outputFields") or len(group_settings["outputFields"]) == 0:
             raise ValueError(
@@ -59,12 +57,6 @@ def read_all_v0_monitors(*, file_path: str, mesh_unit) -> List[ProbeOutput]:
             )
 
         output_fields = group_settings["outputFields"]
-        # for location in group_settings["monitorLocations"]:
-        #     entities.append(Point(name=f"Point-{point_idx}", location=location * mesh_unit))
-        #     point_idx += 1
-        # monitor_list.append(
-        #     ProbeOutput(name=monitor_group_name, entities=entities, output_fields=output_fields)
-        # )
 
         monitor_list.append(
             ProbeOutput(

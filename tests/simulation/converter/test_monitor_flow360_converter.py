@@ -25,8 +25,8 @@ def test_flow360_monitor_convert():
     )
     assert isinstance(monitor_list, list)
     assert len(monitor_list) == 2
-    assert len(monitor_list[0].entities.stored_entities) == 1
-    assert len(monitor_list[1].entities.stored_entities) == 3
+    assert len(monitor_list[0].entities.stored_entities[0].locations) == 1
+    assert len(monitor_list[1].entities.stored_entities[0].locations) == 3
     assert monitor_list[0].output_fields.items == ["primitiveVars"]
     assert monitor_list[1].output_fields.items == ["mut"]
     assert all([isinstance(item, ProbeOutput) for item in monitor_list])
