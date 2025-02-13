@@ -34,6 +34,7 @@ from flow360.component.simulation.entity_info import GeometryEntityInfo
 from flow360.component.simulation.outputs.output_entities import (
     Point,
     PointArray,
+    PointGroup,
     Slice,
 )
 from flow360.component.simulation.primitives import Box, Cylinder, Edge, Surface
@@ -88,7 +89,7 @@ def _set_up_param_entity_info(entity_info, params: SimulationParams):
 
     entity_registry = params.used_entity_registry
     # Creating draft entities
-    for draft_type in [Box, Cylinder, Point, PointArray, Slice]:
+    for draft_type in [Box, Cylinder, Point, PointArray, PointGroup, Slice]:
         draft_entities = entity_registry.find_by_type(draft_type)
         for draft_entity in draft_entities:
             if draft_entity not in entity_info.draft_entities:

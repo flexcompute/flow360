@@ -146,3 +146,32 @@ class PointArray(_PointEntityBase):
     start: LengthType.Point = pd.Field(description="The starting point of the line.")
     end: LengthType.Point = pd.Field(description="The end point of the line.")
     number_of_points: int = pd.Field(gt=2, description="Number of points along the line.")
+
+
+class PointGroup(_PointEntityBase):
+    """
+    :class:`PointGroup` class for defining a group of scattered monitor points for
+    :class:`~flow360.ProbeOutput`/:class:`~flow360.SurfaceProbeOutput`.
+
+    Example
+    -------
+    Define :class:`PointGroup` with 3 points.
+
+    >>> fl.PointGroup(
+    ...     name="Group_1",
+    ...     locations=[
+    ...         (0.0, 0.0, 0.0),
+    ...         (1.0, 2.0, 3.0),
+    ...         (4.0, 5.0, 6.0)
+    ...     ] * fl.u.m,
+    ... )
+
+    ====
+    """
+
+    private_attribute_entity_type_name: Literal["PointGroup"] = pd.Field("PointGroup", frozen=True)
+    private_attribute_id: str = pd.Field(default_factory=generate_uuid, frozen=True)
+    # pylint: disable=no-member
+    locations: LengthType.CoordinateGroup = pd.Field(
+        description="The location for each point in the group."
+    )
