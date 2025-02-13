@@ -597,7 +597,7 @@ class _DimensionedType(metaclass=ABCMeta):
                         raise TypeError(
                             f"arg '{value}' needs to be a 2-dimensional collection of values"
                         )
-                    
+
                     if not all(len(value[0]) == len(item) for item in value):
                         raise TypeError(
                             f"arg '{value}' needs to have the same length for each item in the collection"
