@@ -595,15 +595,6 @@ class _DimensionedType(metaclass=ABCMeta):
                             f"arg '{value}' needs to be a 2-dimensional collection of values"
                         )
 
-                    # if isinstance(value, _Flow360BaseUnit):
-                    #     is_same_length = all(len(value.val[0]) == len(item) for item in value.val)
-                    # else:
-                    #     is_same_length = all(len(value[0]) == len(item) for item in value)
-                    # if not is_same_length:
-                    #     raise TypeError(
-                    #         f"arg '{value}' needs to have the same length for each item in the collection"
-                    #     )
-
                     if shape[0] and len(value) != shape[0]:
                         raise TypeError(
                             f"arg '{value}' needs to be a 2-dimensional collection of values "
