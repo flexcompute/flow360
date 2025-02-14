@@ -6,7 +6,11 @@ import flow360.component.simulation.units as u
 from flow360.component.simulation.operating_condition.operating_condition import (
     AerospaceCondition,
 )
-from flow360.component.simulation.outputs.output_entities import Point, PointArray
+from flow360.component.simulation.outputs.output_entities import (
+    Point,
+    PointArray,
+    PointGroup,
+)
 from flow360.component.simulation.outputs.outputs import (
     AeroAcousticOutput,
     Isosurface,
@@ -475,6 +479,29 @@ def probe_output_with_point_array():
     return (
         [
             ProbeOutput(
+                name="prb group",
+                entities=[
+                    PointGroup(
+                        name="Group 1",
+                        locations=[
+                            [0.1, 0.2, 0.3],
+                            [1.3, 1.5, 1.7],
+                        ]
+                        * u.m,
+                    ),
+                    PointGroup(
+                        name="Group 2",
+                        locations=[
+                            [2.1, 0.2, 0.3],
+                            [3.3, 1.5, 1.7],
+                            [4.3, 1.5, 1.7],
+                        ]
+                        * u.m,
+                    ),
+                ],
+                output_fields=["primitiveVars", "Cp"],
+            ),
+            ProbeOutput(
                 name="prb line",
                 entities=[
                     PointArray(
@@ -525,6 +552,28 @@ def probe_output_with_point_array():
         ],
         {
             "monitors": {
+                "prb group": {
+                    "start": [
+                        [0.1, 0.2, 0.3],
+                        [1.3, 1.5, 1.7],
+                        [2.1, 0.2, 0.3],
+                        [3.3, 1.5, 1.7],
+                        [4.3, 1.5, 1.7],
+                    ],
+                    "end": [
+                        [0.1, 0.2, 0.3],
+                        [1.3, 1.5, 1.7],
+                        [2.1, 0.2, 0.3],
+                        [3.3, 1.5, 1.7],
+                        [4.3, 1.5, 1.7],
+                    ],
+                    "numberOfPoints": [1, 1, 1, 1, 1],
+                    "outputFields": ["primitiveVars", "Cp"],
+                    "animationFrequency": 1,
+                    "animationFrequencyOffset": 0,
+                    "computeTimeAverages": False,
+                    "type": "lineProbe",
+                },
                 "prb line": {
                     "start": [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
                     "end": [[1.1, 1.2, 1.3], [1.3, 1.5, 1.7]],

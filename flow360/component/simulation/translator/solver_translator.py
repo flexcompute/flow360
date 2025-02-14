@@ -34,7 +34,11 @@ from flow360.component.simulation.models.volume_models import (
     Rotation,
     Solid,
 )
-from flow360.component.simulation.outputs.output_entities import Point, PointArray
+from flow360.component.simulation.outputs.output_entities import (
+    Point,
+    PointArray,
+    PointGroup,
+)
 from flow360.component.simulation.outputs.outputs import (
     AeroAcousticOutput,
     Isosurface,
@@ -280,6 +284,11 @@ def inject_probe_info(entity: EntityList):
         "type": "lineProbe",
     }
     for item in entity.stored_entities:
+        if isinstance(item, PointGroup):
+            for location in item.locations:
+                translated_entity_dict["start"].append(location.value.tolist())
+                translated_entity_dict["end"].append(location.value.tolist())
+                translated_entity_dict["numberOfPoints"].append(1)
         if isinstance(item, PointArray):
             translated_entity_dict["start"].append(item.start.value.tolist())
             translated_entity_dict["end"].append(item.end.value.tolist())
@@ -302,6 +311,11 @@ def inject_surface_probe_info(entity: EntityList):
         "type": "lineProbe",
     }
     for item in entity.stored_entities:
+        if isinstance(item, PointGroup):
+            for location in item.locations:
+                translated_entity_dict["start"].append(location.value.tolist())
+                translated_entity_dict["end"].append(location.value.tolist())
+                translated_entity_dict["numberOfPoints"].append(1)
         if isinstance(item, PointArray):
             translated_entity_dict["start"].append(item.start.value.tolist())
             translated_entity_dict["end"].append(item.end.value.tolist())

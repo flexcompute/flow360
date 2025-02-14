@@ -17,6 +17,7 @@ from flow360.component.simulation.outputs.output_entities import (
     Isosurface,
     Point,
     PointArray,
+    PointGroup,
     Slice,
 )
 from flow360.component.simulation.outputs.output_fields import (
@@ -449,12 +450,13 @@ class ProbeOutput(Flow360BaseModel):
     """
 
     name: str = pd.Field(description="Name of the monitor group.")
-    entities: EntityList[Point, PointArray] = pd.Field(
+    entities: EntityList[Point, PointArray, PointGroup] = pd.Field(
         alias="probe_points",
         description="List of monitored :class:`~flow360.Point`/"
-        + ":class:`~flow360.PointArray` entities belonging to this "
-        + "monitor group. :class:`~flow360.PointArray` is used to "
-        + "define monitored points along a line.",
+        + ":class:`~flow360.PointArray`/:class:`~flow360.PointGroup`"
+        + "entities belonging to this monitor group."
+        + " :class:`~flow360.PointArray` is used to define monitored points along a line."
+        + " :class:`~flow360.PointGroup` is used to define a group of scattered monitored points.",
     )
     output_fields: UniqueItemList[Union[CommonFieldNames, str]] = pd.Field(
         description="List of output fields. Including :ref:`universal output variables<UniversalVariablesV2>`"
@@ -512,12 +514,13 @@ class SurfaceProbeOutput(Flow360BaseModel):
     """
 
     name: str = pd.Field(description="Name of the surface monitor group.")
-    entities: EntityList[Point, PointArray] = pd.Field(
+    entities: EntityList[Point, PointArray, PointGroup] = pd.Field(
         alias="probe_points",
         description="List of monitored :class:`~flow360.Point`/"
-        + ":class:`~flow360.PointArray` entities belonging to this "
-        + "surface monitor group. :class:`~flow360.PointArray` "
-        + "is used to define monitored points along a line.",
+        + ":class:`~flow360.PointArray`/:class:`~flow360.PointGroup` "
+        + "entities belonging to this surface monitor group. "
+        + ":class:`~flow360.PointArray` is used to define monitored points along a line. "
+        + ":class:`~flow360.PointGroup` is used to define a group of scattered monitor points.",
     )
     # Maybe add preprocess for this and by default add all Surfaces?
     target_surfaces: EntityList[Surface] = pd.Field(

@@ -103,6 +103,7 @@ from flow360.component.simulation.outputs.output_entities import (
     Isosurface,
     Point,
     PointArray,
+    PointGroup,
     Slice,
 )
 from flow360.component.simulation.outputs.outputs import (
@@ -261,4 +262,5 @@ __all__ = [
     "GeometryFiles",
     "SlaterPorousBleed",
     "migration",
+    "PointGroup",
 ]
