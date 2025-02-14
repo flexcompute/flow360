@@ -99,19 +99,16 @@ def _dimensioned_type_serializer(x):
 
 
 def _check_if_input_is_nested_collection(value, nest_level):
-    if nest_level == 1:
+    def get_nesting_level(value):
+        if isinstance(value, np.ndarray):
+            return value.ndim
         if isinstance(value, _Flow360BaseUnit):
-            return all(isinstance(item, Number) for item in value.val)
-        return isinstance(value, Collection)
+            return value.value.ndim
+        if isinstance(value, (list, tuple)):
+            return 1 + max(get_nesting_level(item) for item in value)
+        return 0
 
-    if isinstance(value, Collection):
-        if isinstance(value, _Flow360BaseUnit):
-            return all(
-                _check_if_input_is_nested_collection(item, nest_level - 1) for item in value.val
-            )
-        return all(_check_if_input_is_nested_collection(item, nest_level - 1) for item in value)
-
-    return False
+    return get_nesting_level(value) == nest_level
 
 
 def _check_if_input_has_delta_unit(quant):
@@ -598,21 +595,30 @@ class _DimensionedType(metaclass=ABCMeta):
                             f"arg '{value}' needs to be a 2-dimensional collection of values"
                         )
 
-                    if not all(len(value[0]) == len(item) for item in value):
-                        raise TypeError(
-                            f"arg '{value}' needs to have the same length for each item in the collection"
-                        )
+                    # if isinstance(value, _Flow360BaseUnit):
+                    #     is_same_length = all(len(value.val[0]) == len(item) for item in value.val)
+                    # else:
+                    #     is_same_length = all(len(value[0]) == len(item) for item in value)
+                    # if not is_same_length:
+                    #     raise TypeError(
+                    #         f"arg '{value}' needs to have the same length for each item in the collection"
+                    #     )
 
                     if shape[0] and len(value) != shape[0]:
                         raise TypeError(
-                            f"arg '{value}' needs to be a 2-dimensional collection of value "
-                            + f"with the 1st dimension as {shape[0]}."
+                            f"arg '{value}' needs to be a 2-dimensional collection of values "
+                            + f"with the 1st dimension as {shape[0]}"
                         )
 
-                    if shape[1] and any(len(item) != shape[1] for item in value):
+                    if shape[1] and any(
+                        len(item) != shape[1]
+                        for item in (
+                            value if not isinstance(value, _Flow360BaseUnit) else value.val
+                        )
+                    ):
                         raise TypeError(
-                            f"arg '{value}' needs to be a 2-dimensional collection of value "
-                            + f"with the 2nd dimension as {shape[1]}."
+                            f"arg '{value}' needs to be a 2-dimensional collection of values "
+                            + f"with the 2nd dimension as {shape[1]}"
                         )
 
                     if matrix_cls.type.has_defaults:
@@ -715,6 +721,13 @@ class _DimensionedType(metaclass=ABCMeta):
         return self._VectorType.get_class_object(
             self, allow_zero_norm=False, allow_zero_component=False
         )
+
+    @classproperty
+    def CoordinateGroupTranspose(self):
+        """
+        CoordinateGroup value which stores a group of 3D coordinates
+        """
+        return self._MatrixType.get_class_object(self, shape=(3, None))
 
     @classproperty
     def CoordinateGroup(self):
