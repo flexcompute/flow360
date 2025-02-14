@@ -592,13 +592,13 @@ class _DimensionedType(metaclass=ABCMeta):
                     )
                     if not is_nested_collection:
                         raise TypeError(
-                            f"arg '{value}' needs to be a 2-dimensional collection of values"
+                            f"arg '{value}' needs to be a 2-dimensional collection of values."
                         )
 
                     if shape[0] and len(value) != shape[0]:
                         raise TypeError(
                             f"arg '{value}' needs to be a 2-dimensional collection of values "
-                            + f"with the 1st dimension as {shape[0]}"
+                            + f"with the 1st dimension as {shape[0]}."
                         )
 
                     if shape[1] and any(
@@ -609,7 +609,7 @@ class _DimensionedType(metaclass=ABCMeta):
                     ):
                         raise TypeError(
                             f"arg '{value}' needs to be a 2-dimensional collection of values "
-                            + f"with the 2nd dimension as {shape[1]}"
+                            + f"with the 2nd dimension as {shape[1]}."
                         )
 
                     if matrix_cls.type.has_defaults:

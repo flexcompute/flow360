@@ -289,7 +289,6 @@ def inject_probe_info(entity: EntityList):
                 translated_entity_dict["start"].append(location.value.tolist())
                 translated_entity_dict["end"].append(location.value.tolist())
                 translated_entity_dict["numberOfPoints"].append(1)
-
         if isinstance(item, PointArray):
             translated_entity_dict["start"].append(item.start.value.tolist())
             translated_entity_dict["end"].append(item.end.value.tolist())

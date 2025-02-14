@@ -648,7 +648,7 @@ def test_unit_system():
     assert all(all(value == 1 * u.m for value in coord) for coord in data.locationsT)
 
     with pytest.raises(
-        ValueError, match=r"arg '\[-1 -1 -1\] m' needs to be a 2-dimensional collection of values"
+        ValueError, match=r"arg '\[-1 -1 -1\] m' needs to be a 2-dimensional collection of values."
     ):
         data = MatrixDataWithUnits(
             locations=[-1, -1, -1] * u.m,
@@ -657,7 +657,16 @@ def test_unit_system():
 
     with pytest.raises(
         ValueError,
-        match=r"arg '\[\[-1 -1\]\n \[-1 -1\]\] m' needs to be a 2-dimensional collection of values with the 2nd dimension as 3",
+        match=r"setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions.",
+    ):
+        data = MatrixDataWithUnits(
+            locations=[[-1, -1, -1], [-1, -1, -1, -2]] * u.m,
+            locationsT=[[1, 1], [1, 1], [1, 1]] * u.m,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r"arg '\[\[-1 -1\]\n \[-1 -1\]\] m' needs to be a 2-dimensional collection of values with the 2nd dimension as 3.",
     ):
         data = MatrixDataWithUnits(
             locations=[[-1, -1], [-1, -1]] * u.m, locationsT=[[1, 1], [1, 1], [1, 1]] * u.m
@@ -665,7 +674,7 @@ def test_unit_system():
 
     with pytest.raises(
         ValueError,
-        match=r"arg '\[\[1 1\]\n \[1 1\]\n \[1 1\]\n \[1 1\]\] m' needs to be a 2-dimensional collection of values with the 1st dimension as 3",
+        match=r"arg '\[\[1 1\]\n \[1 1\]\n \[1 1\]\n \[1 1\]\] m' needs to be a 2-dimensional collection of values with the 1st dimension as 3.",
     ):
         data = MatrixDataWithUnits(
             locations=[[-1, -1, -1], [-1, -1, -1]] * u.m,
