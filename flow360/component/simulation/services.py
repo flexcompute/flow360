@@ -58,7 +58,6 @@ from flow360.component.simulation.validation.validation_context import (
     ALL,
     ValidationLevelContext,
 )
-from flow360.component.utils import remove_properties_by_name
 from flow360.exceptions import Flow360TranslationError
 
 unit_system_map = {
@@ -264,7 +263,7 @@ def validate_model(
     validation_warnings = None
     validated_param = None
 
-    params_as_dict = clean_params_dict(params_as_dict, root_item_type)
+    params_as_dict = clean_params_dict_for_validation(params_as_dict, root_item_type)
 
     # The final validation levels will be the intersection of the requested levels and the levels available
     # We always assume we want to run case so that we can expose as many errors as possible
@@ -285,7 +284,7 @@ def validate_model(
     return validated_param, validation_errors, validation_warnings
 
 
-def clean_params_dict(params: dict, root_item_type: str) -> dict:
+def clean_params_dict_for_validation(params: dict, root_item_type: str) -> dict:
     """
     Cleans the parameters dictionary by removing unwanted properties.
 
@@ -301,8 +300,6 @@ def clean_params_dict(params: dict, root_item_type: str) -> dict:
     dict
         The cleaned parameters dictionary.
     """
-    params = remove_properties_by_name(params, "_id")
-    params = remove_properties_by_name(params, "hash")  # From client
 
     if root_item_type == "VolumeMesh":
         params.pop("meshing", None)
