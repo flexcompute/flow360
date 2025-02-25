@@ -12,6 +12,7 @@ import numpy as np
 import pydantic as pd
 import unyt
 
+from flow360.component.simulation.conversion import need_conversion, unit_converter
 from flow360.component.simulation.framework.base_model import Flow360BaseModel
 from flow360.component.simulation.utils import is_exact_instance
 
@@ -285,32 +286,31 @@ def _remove_duplicate_entities(expanded_entities: List[EntityBase]):
     """
     all_entities = {}
 
+    # pylint: disable=protected-access
     for entity in expanded_entities:
         if entity.name not in all_entities:
-            all_entities[entity.name] = []
-        all_entities[entity.name].append(entity)
+            all_entities[entity.name] = {"non_generic": None, "entities": []}
+        if entity._is_generic() is False and all_entities[entity.name]["non_generic"] is None:
+            all_entities[entity.name]["non_generic"] = entity
+        else:
+            all_entities[entity.name]["entities"].append(entity)
 
-    for name, entity_list in all_entities.items():
-        if len(entity_list) > 1:
-            # step 1: find one instance that is non-generic if any
-            base_index = 0
-            for base_index, entity in enumerate(entity_list):
-                # pylint: disable=protected-access
-                if entity._is_generic() is False:
-                    break
-            for index, entity in enumerate(entity_list):
-                if index == base_index:
-                    continue  # no merging into self
-                entity_list[base_index] = _merge_objects(entity_list[base_index], entity)
-                entity_list.remove(entity)
+    for name, data in all_entities.items():
+        entity_non_generic = data["non_generic"]
+        if entity_non_generic is not None:
+            for entity in data["entities"]:
+                entity_non_generic = _merge_objects(entity_non_generic, entity)
+            data["non_generic"] = entity_non_generic
+        else:
+            if len(data["entities"]) > 1:
+                error_message = f"Duplicate entities found for {name}."
+                for entity in data["entities"]:
+                    error_message += f"\n{entity}\n"
+                error_message += "Please remove duplicates."
+                raise ValueError(error_message)
+            data["non_generic"] = data["entities"][0]
 
-        if len(entity_list) != 1:
-            error_message = f"Duplicate entities found for {name}."
-            for entity in entity_list:
-                error_message += f"\n{entity}\n"
-            error_message += "Please remove duplicates."
-            raise ValueError(error_message)
-    return [entity_list[0] for entity_list in all_entities.values()]
+    return [data["non_generic"] for data in all_entities.values()]
 
 
 class EntityList(Flow360BaseModel, metaclass=_EntityListMeta):
@@ -446,7 +446,7 @@ class EntityList(Flow360BaseModel, metaclass=_EntityListMeta):
         Raises:
             TypeError: If an entity does not match the expected type.
         Returns:
-            Exapnded entities list.
+            Expanded entities list.
         """
 
         entities = getattr(self, "stored_entities", [])
@@ -455,14 +455,20 @@ class EntityList(Flow360BaseModel, metaclass=_EntityListMeta):
             return None
 
         expanded_entities = []
+        not_merged_entity_types_name = ["Point"]
+        not_merged_entities = []
 
         # pylint: disable=not-an-iterable
         for entity in entities:
+            if entity.private_attribute_entity_type_name in not_merged_entity_types_name:
+                not_merged_entities.append(entity)
+                continue
             if entity not in expanded_entities:
                 # Direct entity references are simply appended if they are of a valid type
                 expanded_entities.append(entity)
 
         expanded_entities = _remove_duplicate_entities(expanded_entities)
+        expanded_entities += not_merged_entities
 
         if expanded_entities == []:
             raise ValueError(
@@ -475,11 +481,76 @@ class EntityList(Flow360BaseModel, metaclass=_EntityListMeta):
             return copy.deepcopy(expanded_entities)
         return expanded_entities
 
+    # pylint: disable=too-many-locals
+    def _batch_preprocess(self, **kwargs):
+        """
+        Batch preprocesses properties for all child entities that need processing.
+
+        Inspects each attribute of every stored entity. For attributes that need conversion
+        (as determined by conversion.need_conversion), it groups values by attribute name.
+
+        - If the value's underlying array is not already 2D (i.e. not a true batched array),
+        the value is grouped for batch processing.
+        - If the value is already a 2D array, it is marked for direct (traditional) conversion.
+
+        For batch groups, the underlying data of each unyt_array is converted to a common unit,
+        stacked into a single unyt_array, and then processed in one vectorized call.
+
+        For directly converted values, the conversion is applied individually.
+        """
+        stored_entities = self.stored_entities
+        groups = {}
+        direct = {}
+
+        for idx, entity in enumerate(stored_entities):
+            for attr, value in entity.__dict__.items():
+                if need_conversion(value):
+                    if getattr(value, "ndim", 1) == 2:
+                        direct.setdefault(attr, []).append(idx)
+                    else:
+                        groups.setdefault(attr, {"indices": [], "values": []})
+                        groups[attr]["indices"].append(idx)
+                        groups[attr]["values"].append(value)
+
+        for attr, data in groups.items():
+            group_values = data["values"]
+            ref_unit = group_values[0].units
+            converted = np.empty((len(group_values), group_values[0].size))
+            for i, val in enumerate(group_values):
+                converted[i] = val.to(ref_unit).v
+            data["values"] = unyt.unyt_array(converted, ref_unit)
+
+        params = kwargs.get("params")
+        required_by = kwargs.get("required_by", [])
+
+        new_entities = [entity.__dict__.copy() for entity in stored_entities]
+
+        for attr, data in groups.items():
+            flow360_conv_system = unit_converter(
+                data["values"].units.dimensions,
+                params=params,
+                required_by=[*required_by, attr],
+            )
+            # pylint: disable=no-member
+            data["values"].units.registry = flow360_conv_system.registry
+            processed_array = data["values"].in_base(unit_system="flow360_v2")
+
+            for idx, processed_val in zip(data["indices"], processed_array):
+                new_entities[idx][attr] = processed_val
+
+        for attr, indices in direct.items():
+            for idx in indices:
+                new_entities[idx] = stored_entities[idx].preprocess(**kwargs)
+
+        solver_values = {"stored_entities": new_entities}
+        return solver_values
+
     # pylint: disable=arguments-differ
     def preprocess(self, **kwargs):
         """
         Expand and overwrite self.stored_entities in preparation for submissin/serialization.
         Should only be called as late as possible to incoperate all possible changes.
         """
+        # WARNING: this is very expensive all for long lists as it is quadratic
         self.stored_entities = self._get_expanded_entities(create_hard_copy=False)
-        return super().preprocess(**kwargs)
+        return self._batch_preprocess(**kwargs)
